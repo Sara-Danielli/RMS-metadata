@@ -13,7 +13,8 @@ library(future)
 plan("multiprocess", workers = 256)
 options(future.globals.maxSize = 256000 * 1024^2)
 
-PDX.combined <- readRDS("/mnt/Sara/write/Danielli_Patel_Langenau_20221220.rds")
+#PDX.combined <- readRDS("/mnt/Sara/write/Danielli_Patel_Langenau_20221220.rds")
+PDX.combined <- readRDS("/Volumes/Sara_PhD/scRNAseq_data/write/Danielli_Patel_Langenau_20221220.rds")
 head(PDX.combined@meta.data)
 
 ## Data normalization
@@ -93,8 +94,13 @@ PDX.combined <- RunUMAP(PDX.combined, dims = 1:15, reduction = 'pca_no_regressio
 # Umap plot based on sample
 DimPlot(PDX.combined, reduction = "UMAP_no_regression", group.by = 'name', pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012), shuffle=TRUE,
         cols = c(col3, col4))+ NoLegend() + NoAxes()
-ggsave("/mnt/Sara/output/metadata/Patel_Danielli_Langenau/no_reg/3_UMAP_col_noleg.pdf", 
+ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/Patel_Danielli_Langenau/no_reg/3_UMAP_col_noleg.pdf", 
        width=5, height=5, dpi=300)
+
+DimPlot(PDX.combined, reduction = "UMAP_no_regression", group.by = 'name', pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012), shuffle=TRUE,
+        cols = c(col3, col4)) + NoAxes()
+ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/Patel_Danielli_Langenau/no_reg/3_UMAP_col.pdf", 
+       width=15, height=5, dpi=300)
 
 ## Umap plot based on RMS subtype
 DimPlot(PDX.combined, reduction = "UMAP_no_regression", group.by = 'subtype', pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012), shuffle=TRUE,
