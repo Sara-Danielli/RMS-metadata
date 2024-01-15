@@ -51,6 +51,10 @@ Steps used for this project
  
 **4. Visualization plots of RPCA-integrated object**
 - Use '4_Plots_ARMS_P3F1_only.R', '4_Plots_ARMS_P7F1_only.R' or '4_Plots_ERMS_only.R' to visualize UMAPS, heatmap, etc.
+  
+**5. Visualize overlap between marker genes across different molecular subgroups (Fig. 3B)**
+- Use '10_Correlation_signatures.R' script using the signature markers for each subtype
+ 
  
      ---
  
