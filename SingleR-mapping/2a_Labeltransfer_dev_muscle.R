@@ -10,8 +10,8 @@ library(readxl)
 library(data.table)
 library(paletteer)
 library(RColorBrewer)
-library(scater)
-library(scRNAseq)
+#library(scater)
+#library(scRNAseq)
 library(SingleR)
 
 setwd('/Volumes/Sara_PhD/scRNAseq_data/')
@@ -25,23 +25,10 @@ setwd('/Volumes/Sara_PhD/scRNAseq_data/')
       FPRMS <- readRDS("./write/Danielli_Patel_Langenau_RPCA_ARMS_P3F1_annotated.rds")
       muscle <- readRDS("./write/Dev_muscle_Xietal.rds")
       
-      
       # reorder labels
-      muscle$orig.ident.short_cell.type <- factor(x = muscle$orig.ident.short_cell.type, 
-                                                         levels = c('Wk5.0_AP32_MP',  'Wk5.0_AP37_MP',  
-                                                                    'Wk6.0_AP5_MP', 'Wk6.0_AP13_MP', 'Wk6.5_AP22_MB-MC', 'Wk6.5_AP22_MP',
-                                                                    'Wk7.0_AP24_MB-MC','Wk7.0_AP24_MP',  'Wk7.0_AP30_MB-MC', 
-                                                                    'Wk7.0_AP30_MP',  'Wk7.0_AP6_MB-MC', 'Wk7.0_AP6_MP', 
-                                                                    'Wk7.25_AP29_MB',  'Wk7.25_AP29_MC', 'Wk7.25_AP29_MP', 'Wk7.25_AP29_SkM.Mesen', 'Wk7.25_AP38_MB', 
-                                                                    'Wk7.25_AP38_MC',  'Wk7.25_AP38_MP','Wk7.25_AP38_SkM.Mesen',
-                                                                    'Wk7.75_AP10_MB',   'Wk7.75_AP10_MC',   'Wk7.75_AP10_MP', 'Wk7.75_AP10_SkM.Mesen', 
-                                                                    'Wk9_AP14_MB',  'Wk9_AP14_MC', 'Wk9_AP14_MP','Wk9_AP14_SkM.Mesen','Wk9_AP36_MB', 
-                                                                    'Wk9_AP36_MC', 'Wk9_AP36_SkM.Mesen', 'Wk9_AP36_MP',
-                                                                    'Wk12_AP23_MB-MC',  'Wk12_AP23_MP',  'Wk12_AP23_SkM.Mesen', 
-                                                                    'Wk14_AP25_MB-MC',   'Wk14_AP25_SkM.Mesen', 'Wk14_AP25_MP',
-                                                                    'Wk17_AP17_MB-MC', 'Wk17_AP17_MP', 'Wk17_AP17_SkM.Mesen',
-                                                                    'Wk18_AP16_MB-MC', 'Wk18_AP16_MP', 'Wk18_AP16_SkM.Mesen',
-                                                                    'Yr7_AP11_SC', 'Yr11_AP34_SC', 'Yr34_AP20_SC', 'Yr42_AP28_SC'))
+      muscle$celltype <- factor(x = muscle$celltype, 
+                        levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
+                        "Skeletal mesenchymal",  "Postnatal satellite cells"))
       
       
 # transform into single cell object
@@ -54,7 +41,7 @@ setwd('/Volumes/Sara_PhD/scRNAseq_data/')
 ############################################################
       
 # use SingleR to transfer labels
-      pred.FPRMS <- SingleR(test=FPRMS.sce, ref=muscle.sce, labels=muscle.sce$orig.ident.short_cell.type, de.method="wilcox")
+      pred.FPRMS <- SingleR(test=FPRMS.sce, ref=muscle.sce, labels=muscle.sce$celltype, de.method="wilcox")
       table <- table(pred.FPRMS$labels)
       write.csv(table, "./output/metadata/dev_muscle/SingleR_projection_FPRMS/0_prediction.csv")
       

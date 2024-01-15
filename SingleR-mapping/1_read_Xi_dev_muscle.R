@@ -26,6 +26,12 @@ genelist_dir <- file.path(base_dir, 'list_final')
 col_celltype <- c('#C70E7BFF', '#FC6882FF',  '#6C6C9DFF',  '#A6E000FF','#1BB6AFFF','#172869FF')
 names(col_celltype) <- c('Myogenic progenitors', 'Myoblasts-myocyte', 'Skeletal mesenchymal', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells')
 
+#colors time points
+col_timepoints <- c('#9E0142FF', '#D53E4FFF', '#F46D43FF', '#F46D43FF', '#FDAE61FF',  '#FEE08BFF',
+                     '#FFFFBFFF',   '#E6F598FF', '#ABDDA4FF', '#66C2A5FF', '#3288BDFF', 
+                    c(rep('#5E4FA2FF', 4)))
+names(col_timepoints) <- c("Wk5.0", "Wk6.0" ,  "Wk6.5", "Wk7.0", "Wk7.25",  "Wk7.75" , "Wk9" ,   "Wk12",   "Wk14", "Wk17" ,  "Wk18", 
+                           "Yr7",    "Yr11",   "Yr34," ,  "Yr42")
 
 
 ##################################################################
@@ -87,8 +93,8 @@ DefaultAssay(merged_Xietal) <- "RNA"
 # Define mitochondrial genes
 merged_Xietal[["percent.mt"]] <- PercentageFeatureSet(merged_Xietal, pattern = "^MT-")
 
-#metadata
-  # add cell type info
+# Refine metadata annotations
+  # (1) add cell type info
   cellname <- colnames(merged_Xietal)
   celltype <- unlist(str_split(merged_Xietal@meta.data$Cell.Type, "-", n = 1))
   #create dataframe
@@ -96,21 +102,22 @@ merged_Xietal[["percent.mt"]] <- PercentageFeatureSet(merged_Xietal, pattern = "
   # add info as metadata  
   merged_Xietal <- AddMetaData(merged_Xietal, metadata = df)
   
-  # add average cell type (MP, MB, ecc)
-  third_elements <- c()
+  # add average cell type (MP, MB, ecc) and time point
+  celltype <- c()
+  timepoint <- c()
   # extract average cell type
   cell_type <- merged_Xietal@meta.data$orig.ident.short_cell.type
   # Extract the third element
   for (i in 1:length(cell_type)) {
     split_elements <- str_split(cell_type[i], "_", n = 3)
-    third_elements[i] <- split_elements[[1]][3]
+    celltype[i] <- split_elements[[1]][3]
+    timepoint[i] <- split_elements[[1]][1]
   }
   #create dataframe
-  df <- data.frame(cellname, third_elements)
+  df <- data.frame(cellname, celltype, timepoint)
   # add info as metadata  
   merged_Xietal <- AddMetaData(merged_Xietal, metadata = df)
-  # rename
-  merged_Xietal[['celltype']] <- merged_Xietal[['third_elements']]
+  
   
 # Rename celltype names  -----------------------------------
   metadata <- merged_Xietal@meta.data
@@ -169,39 +176,10 @@ merged_Xietal
 merged_Xietal <- RunPCA(merged_Xietal, reduction.name = "pca_no_regression", reduction.key = "pca_no_regression")
 
 # reorder labels
-merged_Xietal$orig.ident.short_cell.type <- factor(x = merged_Xietal$orig.ident.short_cell.type, 
-                               levels = c('Wk5.0_AP32_MP',  'Wk5.0_AP37_MP',  
-                                          'Wk6.0_AP5_MP', 'Wk6.0_AP13_MP', 'Wk6.5_AP22_MB-MC', 'Wk6.5_AP22_MP',
-                                          'Wk7.0_AP24_MB-MC','Wk7.0_AP24_MP',  'Wk7.0_AP30_MB-MC', 
-                                          'Wk7.0_AP30_MP',  'Wk7.0_AP6_MB-MC', 'Wk7.0_AP6_MP', 
-                                          'Wk7.25_AP29_MB',  'Wk7.25_AP29_MC', 'Wk7.25_AP29_MP', 'Wk7.25_AP29_SkM.Mesen', 'Wk7.25_AP38_MB', 
-                                          'Wk7.25_AP38_MC',  'Wk7.25_AP38_MP','Wk7.25_AP38_SkM.Mesen',
-                                          'Wk7.75_AP10_MB',   'Wk7.75_AP10_MC',   'Wk7.75_AP10_MP', 'Wk7.75_AP10_SkM.Mesen', 
-                                          'Wk9_AP14_MB',  'Wk9_AP14_MC', 'Wk9_AP14_MP','Wk9_AP14_SkM.Mesen','Wk9_AP36_MB', 
-                                          'Wk9_AP36_MC', 'Wk9_AP36_SkM.Mesen', 'Wk9_AP36_MP',
-                                          'Wk12_AP23_MB-MC',  'Wk12_AP23_MP',  'Wk12_AP23_SkM.Mesen', 
-                                          'Wk14_AP25_MB-MC',   'Wk14_AP25_SkM.Mesen', 'Wk14_AP25_MP',
-                                          'Wk17_AP17_MB-MC', 'Wk17_AP17_MP', 'Wk17_AP17_SkM.Mesen',
-                                          'Wk18_AP16_MB-MC', 'Wk18_AP16_MP', 'Wk18_AP16_SkM.Mesen',
-                                          'Yr7_AP11_SC', 'Yr11_AP34_SC', 'Yr34_AP20_SC', 'Yr42_AP28_SC'))
+merged_Xietal$timepoint <- factor(x = merged_Xietal$timepoint, 
+                               levels = c("Wk5.0", "Wk6.0" ,  "Wk6.5", "Wk7.0", "Wk7.25",  "Wk7.75" , "Wk9" ,   "Wk12",   "Wk14", "Wk17" ,  "Wk18", 
+                                          "Yr7",    "Yr11",   "Yr34," ,  "Yr42"))
 
-#colors time points
-col1 <- c('#9E0142FF', '#9E0142FF', 
-          '#D53E4FFF', '#D53E4FFF', '#D53E4FFF', '#D53E4FFF',
-          '#F46D43FF', '#F46D43FF','#F46D43FF',
-          '#F46D43FF','#F46D43FF','#F46D43FF',
-          '#FDAE61FF',  '#FDAE61FF',  '#FDAE61FF',  '#FDAE61FF',  '#FDAE61FF',  
-          '#FDAE61FF',  '#FDAE61FF',  '#FDAE61FF', 
-          '#FEE08BFF','#FEE08BFF','#FEE08BFF','#FEE08BFF',
-          '#FFFFBFFF',  '#FFFFBFFF',  '#FFFFBFFF',  '#FFFFBFFF',  '#FFFFBFFF',  
-          '#FFFFBFFF',  '#FFFFBFFF',  '#FFFFBFFF', 
-          '#E6F598FF', '#E6F598FF', '#E6F598FF', 
-          '#ABDDA4FF',  '#ABDDA4FF', '#ABDDA4FF', 
-          '#66C2A5FF',  '#66C2A5FF',  '#66C2A5FF', 
-          '#3288BDFF',   '#3288BDFF',  '#3288BDFF',
-          '#5E4FA2FF',  '#5E4FA2FF', '#5E4FA2FF', '#5E4FA2FF')
-
-# reorder Metaprograms
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
                                  levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
                                             "Skeletal mesenchymal",  "Postnatal satellite cells")) 
@@ -223,7 +201,7 @@ merged_Xietal <- FindNeighbors(merged_Xietal, reduction = 'pca_no_regression', d
 merged_Xietal <- RunUMAP(merged_Xietal, dims = 1:10, reduction = 'pca_no_regression', reduction.name = 'UMAP_no_regression')
 
 ## Plots
-DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'orig.ident.short_cell.type', cols = col1) + NoAxes()
+DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'timepoint', cols = col_timepoints) + NoAxes()
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_celltype_col1.pdf", 
        width=12, height=5, dpi=300)
 
@@ -273,8 +251,12 @@ merged_Xietal$celltype <- factor(x = merged_Xietal$celltype,
 Idents(merged_Xietal) = 'celltype'
 
 
-merged_Xietal.markers <- FindAllMarkers(merged_Xietal, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.3)
+merged_Xietal.markers <- FindAllMarkers(merged_Xietal, only.pos = TRUE, min.pct = 0.3, logfc.threshold = 1)
 write.csv(merged_Xietal.markers, "/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/7_markers.csv")
+
+# save as list
+marker_list <- split(merged_Xietal.markers[, -c(1:6)], f = merged_Xietal.markers$cluster)
+saveRDS(marker_list, file.path(base_dir, 'output/metadata/dev_muscle/7_markers.rds'))
 
 
 plot_bar <-ggplot(merged_Xietal@meta.data, aes(x=orig.ident.short, fill= (merged_Xietal@meta.data$celltype))) + 
