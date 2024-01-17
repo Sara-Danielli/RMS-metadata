@@ -25,8 +25,7 @@ col_cluster_names_aggregate <- c("#7FBC41FF", '#FFAD72FF', '#FFE5CCFF', "#8E0152
 names(col_cluster_names_aggregate) <- c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'Neuronal', 'Apoptosis', 'IFN')
 
 # Load data ------------------------------------------------
-# load data   
-#PDX.integrated <- readRDS(file.path(base_dir, "data/Danielli_Patel_Langenau_RPCA_20230202_scoring100.rds"))
+PDX.integrated <- readRDS(file.path(base_dir, "data/Danielli_Patel_Langenau_RPCA_20230202_scoring100.rds"))
 P3F1 <- readRDS(file.path(base_dir, "data/Danielli_Patel_Langenau_RPCA_ARMS_P3F1_20230713.rds"))
 P7F1 <- readRDS(file.path(base_dir, "data/Danielli_Patel_Langenau_RPCA_ARMS_P7F1_20230713.rds"))
 ERMS <- readRDS(file.path(base_dir, "data/Danielli_Patel_Langenau_RPCA_ERMS_20230713.rds"))
