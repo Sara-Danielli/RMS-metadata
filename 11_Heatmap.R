@@ -313,11 +313,11 @@ right_ha = rowAnnotation(foo = anno_mark(at = rows_genes_to_mark,
                                          labels = rows_genes_to_mark_name))
 
 # define colors heatmap
-col_fun = colorRamp2(c(-1.5, 0, 1.5), c("#2E5A87FF", "#CCCCD2FF", "#A90C38FF"))
+col_fun = colorRamp2(c(-1, 0, 1), c("#2E5A87FF", "#FCFDFEFF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_P3F1_heatmap_20.pdf"), width=9, height=7)
+Cairo::CairoPDF(file.path(plot_dir, "1_P3F1_heatmap_50.pdf"), width=10, height=6)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -437,11 +437,11 @@ right_ha = rowAnnotation(foo = anno_mark(at = rows_genes_to_mark,
                                          labels = rows_genes_to_mark_name))
 
 # define colors heatmap
-col_fun = colorRamp2(c(-1.5, 0, 1.5), c("#2E5A87FF", "#CCCCD2FF", "#A90C38FF"))
+col_fun = colorRamp2(c(-1, 0, 1), c("#2E5A87FF", "#FCFDFEFF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_P7F1_heatmap_20.pdf"), width=9, height=7)
+Cairo::CairoPDF(file.path(plot_dir, "1_P7F1_heatmap_50.pdf"), width=10, height=6)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -476,12 +476,20 @@ dev.off()
 
 # load Seurat object -----------------------------------
 ERMS <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_ERMS_20230713.rds"))
+  # rename ERMS (problem with current IDs)
+  Idents(ERMS) = "cluster_names"
+  new.cluster.ids.aggregate <- c('Progenitor', 'Progenitor', 'Proliferative',  'Differentiated', 'IFN',  'Proliferative', 'Ground', 'Ground')
+  names(new.cluster.ids.aggregate) <- levels(ERMS)
+  ERMS<- RenameIdents(ERMS, new.cluster.ids.aggregate)
+  ERMS[["cluster_names_aggregate"]] <- Idents(object = ERMS)
+  levels(ERMS) <- c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN')
 
 # rename subtype
 metadata <- ERMS@meta.data
 
 # rename DS.Difference_common score into lineage score
 colnames(ERMS@meta.data)[32] <- "Cluster_assignment"
+
 
 # save metadata as df
 metadata <- data.frame(ERMS@meta.data)
@@ -495,7 +503,6 @@ markers <- markers %>%
   mutate_all(~ ifelse(. == '4-Progenitor', 'Progenitor', .)) %>%
   mutate_all(~ ifelse(. == '6-Progenitor', 'Progenitor', .))  %>%
   mutate_all(~ ifelse(. == '2-Ground', 'Ground', .))
-
 
 # order by Annotation and fold change
 markers <- markers %>% arrange(cluster, desc(avg_log2FC))
@@ -561,7 +568,7 @@ column_ha = HeatmapAnnotation(df = annotation_info,
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'DCX', 'SYT1', 'L1CAM', 'STMN4')
+elements_to_find <- c('FN1', 'CD44',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'IFI6', 'SYT1', 'IFI44', 'ISG15')
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -569,11 +576,11 @@ right_ha = rowAnnotation(foo = anno_mark(at = rows_genes_to_mark,
                                          labels = rows_genes_to_mark_name))
 
 # define colors heatmap
-col_fun = colorRamp2(c(-1.5, 0, 1.5), c("#2E5A87FF", "#CCCCD2FF", "#A90C38FF"))
+col_fun = colorRamp2(c(-1, 0, 1), c("#2E5A87FF", "#FCFDFEFF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_ERMS_heatmap_20.pdf"), width=9, height=7)
+Cairo::CairoPDF(file.path(plot_dir, "1_ERMS_heatmap_50.pdf"), width=10, height=6)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -581,7 +588,7 @@ ht <- Heatmap(seurat_df,
               #bottom_annotation = bottom_ha,
               border = TRUE,
               row_split = factor(c(genes_df$Group), 
-                                 levels = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'Neuronal', 'Apoptosis')),
+                                 levels = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN')),
               top_annotation = column_ha,
               right_annotation = right_ha,
               use_raster = TRUE,
