@@ -1,7 +1,7 @@
 # RMS-metadata
 
 <p align="center">
-  <img width="600" height="320" src="Metadata_SUMMARY.png">
+  <img width="600" height="420" src="Metadata_SUMMARY.png">
 </p>
 
 
