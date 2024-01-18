@@ -1,4 +1,11 @@
 # RMS-metadata
+
+<p align="center">
+  <img width="600" height="320" src="Metadata_SUMMARY.png">
+</p>
+
+
+
 Steps used for this project
 
 ---
