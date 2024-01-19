@@ -1,3 +1,4 @@
+# Load packages -----------------------------------
 rm(list = ls())
 
 library(Seurat)
@@ -5,21 +6,20 @@ library(patchwork)
 library(viridis)
 library(future)
 library(ggplot2)
-library(readxl)
-library(writexl)
-library(data.table)
-library(SingleCellExperiment)
-library(paletteer)
-library(SeuratObject)
 library(tidyverse)
 library(cowplot)
 library(dplyr)
 
-setwd('/Volumes/Sara_PhD/scRNAseq_data')
+# Organize environment  -----------------------------------
+base_dir <- '/Volumes/Sara_PhD/scRNAseq_data'
+
+analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs')
+if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
+
 source("./codes/MANUSCRIPT_INTEGRATION/metadata/FINAL/Functions.R")
 
-
-PDX.integrated <- readRDS("./write/Danielli_Patel_Langenau_20230710.rds")
+# Read files  -----------------------------------
+PDX.integrated <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_20230710.rds"))
 
 ## select unintegrated object
 DefaultAssay(PDX.integrated) <- "RNA"
@@ -81,18 +81,27 @@ DefaultAssay(PDX.integrated) <- "RNA"
 ## Subset subtypes
     Idents(object = PDX.integrated) <- "name"
     
+    # subset pairs of samples sequenced across different labs
     mast139_pairs <- subset(PDX.integrated, idents = c( 'Mast139',  'Mast139_SC', 'SJRHB013758_X2'))
     mast111_pairs <- subset(PDX.integrated, idents = c('Mast111',  'SJRHB013758_X1'))
     mast95_pairs <- subset(PDX.integrated, idents = c('Mast95',  'SJRHB013757_X1'))
     mast39_pairs <- subset(PDX.integrated, idents = c('Mast39',  'SJRHB000026_X1'))
     mast85_pairs <- subset(PDX.integrated, idents = c('Mast85_r1', 'Mast85_r2', 'Mast85_r2_SC', 'SJRHB000026_X2'))
-
+    
+    # subset two individual samples with low muscle lineage scores
+    MSK74711 <- subset(PDX.integrated, idents = c('MSK74711'))
+    SJRHB010928_R1 <- subset(PDX.integrated, idents = c('SJRHB010928_R1'))
+    pat20082 <- subset(PDX.integrated, idents = c('20082'))
+    SJRHB013759_A2 <- subset(PDX.integrated, idents = c('SJRHB013759_A2'))
+    
     # Remove integrated obejct to free up space
     rm(PDX.integrated)
     
 # Perform standard downstream to susbet objects
-    object_list <- list(mast139_pairs, mast111_pairs, mast95_pairs, mast39_pairs, mast85_pairs)
-    names(object_list) <- c('mast139_pairs', 'mast111_pairs', 'mast95_pairs', 'mast39_pairs', 'mast85_pairs')
+    object_list <- list(mast139_pairs, mast111_pairs, mast95_pairs, mast39_pairs, mast85_pairs, 
+                        MSK74711, SJRHB010928_R1, pat20082, SJRHB013759_A2)
+    names(object_list) <- c('mast139_pairs', 'mast111_pairs', 'mast95_pairs', 'mast39_pairs', 'mast85_pairs', 
+                            'MSK74711', 'SJRHB010928_R1', '20082', 'SJRHB013759_A2')
     
     object_list <- lapply(X = object_list, FUN = function(x) {
       x <- NormalizeData(x)
@@ -105,65 +114,65 @@ DefaultAssay(PDX.integrated) <- "RNA"
     # Elbow plots
     for (a in 1:length(object_list)) {
       ElbowPlot(object_list[[a]])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/0_ElbowPlot_",names(object_list)[a],".pdf"),
+      ggsave(file.path(analysis_dir, paste0("0_ElbowPlot_",names(object_list)[a],".pdf")),
              width=6, height=4, dpi=300)
     }
     
     # Perform UMAP
     object_list <- lapply(X = object_list, FUN = function(x) {
-      x <- FindNeighbors(x, reduction = "pca", dims = 1:15)
-      x <- RunUMAP(x, dims = 1:15, reduction = "pca",  reduction.key = "umap", reduction.name = "umap")
+      x <- FindNeighbors(x, reduction = "pca", dims = 1:10)
+      x <- RunUMAP(x, dims = 1:10, reduction = "pca",  reduction.key = "umap", reduction.name = "umap")
     })
     
   
 # Plot UMAP (no regression = reduction umap)
     # UMAP origin
     for (a in 1:length(object_list)) {
-      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'origin', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_origin) + NoAxes() + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_",names(object_list)[a],".pdf"),width=6, height=4, dpi=300)    
+      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'origin', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_origin) + NoAxes() + ggtitle(names(object_list)[a])
+      ggsave(file.path(analysis_dir, paste0("1_UMAP_",names(object_list)[a],".pdf")),width=6, height=4, dpi=300)    
     }
     
     p <- list()
     for (a in 1:length(object_list)) {
-      p[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'origin', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_origin) + NoAxes() + NoLegend() + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_",names(object_list)[a],"_no_legend.pdf"),width=4, height=4, dpi=300)   
+      p[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'origin', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_origin) + NoAxes() + NoLegend() + ggtitle(names(object_list)[a])
+      ggsave(file.path(analysis_dir, paste0("1_UMAP_",names(object_list)[a],"_no_legend.pdf")),width=4, height=4, dpi=300)   
     }
     
     # UMAP cluster
     for (a in 1:length(object_list)) {
-      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'cluster_names_aggregate', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names_aggregate) + NoAxes() + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_cluster",names(object_list)[a],".pdf"),width=6, height=4, dpi=300)   
+      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'cluster_names_aggregate', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names_aggregate) + NoAxes() + ggtitle(names(object_list)[a])
+      ggsave(file.path(analysis_dir, paste0("1_UMAP_cluster_",names(object_list)[a],".pdf")),width=6, height=4, dpi=300)   
     }
     
     p2 <- list()
     for (a in 1:length(object_list)) {
-      p2[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'cluster_names_aggregate', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names_aggregate) + NoAxes()+  NoLegend() + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_cluster",names(object_list)[a],"_no_legend.pdf"),width=4, height=4, dpi=300)   
+      p2[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'cluster_names_aggregate', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names_aggregate) + NoAxes()+  NoLegend() + ggtitle(names(object_list)[a])
+      ggsave(file.path(analysis_dir, paste0("1_UMAP_cluster_",names(object_list)[a],"_nolegend.pdf")),width=4, height=4, dpi=300)   
     }
     
     
     # UMAP sample name
     for (a in 1:length(object_list)) {
-      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'name', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names) + NoAxes()  + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_sample",names(object_list)[a],".pdf"),width=6, height=4, dpi=300)   
+      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'name', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names) + NoAxes()  + ggtitle(names(object_list)[a])
+      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_sample_",names(object_list)[a],".pdf"),width=6, height=4, dpi=300)   
     }
     
     p3 <- list()
     for (a in 1:length(object_list)) {
-      p3[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'name', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names) + NoAxes() +  NoLegend() + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_sample",names(object_list)[a],"_no_legend.pdf"),width=4, height=4, dpi=300)   
+      p3[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'name', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_cluster_names) + NoAxes() +  NoLegend() + ggtitle(names(object_list)[a])
+      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_sample_",names(object_list)[a],"_no_legend.pdf"),width=4, height=4, dpi=300)   
     }
     
     # UMAP model
     for (a in 1:length(object_list)) {
-      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'model', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_model) + NoAxes()  + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_model",names(object_list)[a],".pdf"),width=6, height=4, dpi=300)   
+      DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'model', pt.size = 8, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_model) + NoAxes()  + ggtitle(names(object_list)[a])
+      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_model_",names(object_list)[a],".pdf"),width=4, height=4, dpi=300)   
     }
     
     p4 <- list()
     for (a in 1:length(object_list)) {
       p4[[a]] <- DimPlot(object_list[[a]], reduction = "umap", shuffle=TRUE, group.by = 'model', pt.size = 6, raster=TRUE, raster.dpi = c(1012, 1012), cols = col_model) + NoAxes() +  NoLegend() + ggtitle(names(object_list)[a])
-      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_model",names(object_list)[a],"_no_legend.pdf"),width=4, height=4, dpi=300)   
+      ggsave(paste0("./output/metadata/Patel_Danielli_Langenau/RPCA_name/Pairs/1_UMAP_model_",names(object_list)[a],"_no_legend.pdf"),width=4, height=6, dpi=300)   
     }
     
     
