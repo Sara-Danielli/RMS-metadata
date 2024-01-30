@@ -461,3 +461,38 @@ PDX.integrated_small <- subset(PDX.integrated, downsample = 500)
 
 p <- SCpubr::do_CorrelationPlot(sample = PDX.integrated_small, cell_size = 10)
 ggsave(file.path(analysis_dir,"17_correlation_subset_500_cells.pdf"), width=6, height=7, dpi=300)
+
+
+
+
+
+RMS.integrated <- readRDS(file.path(base_dir, "write/RMS_atlas_final_20240130.rds"))
+
+# Violin plot neuronal markers
+Vln_scores <- c("TBXT", "SOX2")
+names(Vln_scores) <- c("TBXT", "SOX2")
+
+for (a in 1:length(Vln_scores)) {
+  VlnPlot(RMS.integrated, features = Vln_scores[[a]], group.by = 'name',  split.by = 'subtype',  pt.size=0,  cols = col_subtype) 
+  ggsave(file.path(analysis_dir, paste0("18_Vln_plot_scores_",names(Vln_scores)[a],".pdf")), width=15, height=5, dpi=300)
+}
+
+
+# Dotplot scores
+DotPlot(RMS.integrated, 
+        features = names(Vln_scores), 
+        group.by = 'Cluster assignment',
+        split.by = 'subtype',
+        assay = 'RNA', 
+        cols = c("white", "red3"),
+        scale = FALSE,
+        col.min = 0)  + 
+  #scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(plot_dir, paste0("2_DotPlot_scores_", names(seurat_objects)[i], ".pdf")), width=5.5, height=4.5, dpi=300)

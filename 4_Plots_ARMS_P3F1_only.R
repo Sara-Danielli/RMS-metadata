@@ -17,13 +17,16 @@ library(ggpubr)
 library(cowplot)
 
 base_dir <- '/Volumes/Sara_PhD/scRNAseq_data'
+resource_dir <- file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Manuscripts/2023 - Meta-data/GITHUB/RMS-metadata/Resources')
 source(file.path(base_dir, "codes/MANUSCRIPT_INTEGRATION/metadata/FINAL/Functions.R"))
+source(file.path(resource_dir, "Plot_style_v2.R"))
 
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/P3F1analysis')
 if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
 
 ## read file
 P3F1.integrated <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_ARMS_P3F1_20230713.rds"))
+
 DefaultAssay(P3F1.integrated) <- "integrated"
 
 ## Define colors 
@@ -334,4 +337,32 @@ ggsave(file.path(analysis_dir,"19_VlnPlot.pdf"), width=6, height=4, dpi=300)
 
 
 
-       
+P3F1 <- readRDS(file.path(base_dir, "write/FPRMS_PAX3FOXO1_final_20240130.rds"))
+
+# Violin plot neuronal markers
+Vln_scores <- c("TBXT", "SOX2")
+names(Vln_scores) <- c("TBXT", "SOX2")
+
+for (a in 1:length(Vln_scores)) {
+  VlnPlot(P3F1, features = Vln_scores[[a]], group.by = 'Cluster assignment', pt.size=0,  cols = col_cluster_names_aggregate) 
+  ggsave(file.path(analysis_dir, paste0("20_Vln_plot_scores_",names(Vln_scores)[a],".pdf")), width=5, height=5, dpi=300)
+}
+
+
+# Dotplot scores
+DotPlot(P3F1, 
+        features = names(Vln_scores), 
+        group.by = 'Cluster assignment',
+        assay = 'RNA', 
+        cols = c("white", "red3"),
+        scale = FALSE,
+        col.min = 0)  + 
+  #scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(analysis_dir, paste0("21_DotPlot_scores_TBXT_SOX2.pdf")), width=5.5, height=4.5, dpi=300)
