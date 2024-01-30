@@ -2,6 +2,13 @@ library(dplyr)
 library(Seurat)
 library(ggplot2)
 
+## color palette
+col_cluster_names_aggregate <- c("#7FBC41FF", '#FFAD72FF', '#FFE5CCFF', "#8E0152FF",'#66C5CCFF' , '#D8D8E0FF', '#B497E7FF')
+names(col_cluster_names_aggregate) <- c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'Neuronal', 'Apoptosis', 'IFN')
+
+col_cluster_names_aggregate_integrated <- c("#276419FF","#7FBC41FF", '#FFAD72FF', '#FFE5CCFF', "#DE77AEFF", "#8E0152FF", '#D8D8E0FF')
+names(col_cluster_names_aggregate_integrated) <- c('Progenitor','TR-progenitor', 'Proliferative', 'Ground', 'TR-differentiated', 'Differentiated', 'Apoptosis')
+
 ## Style plots
 
 # Barplot function
