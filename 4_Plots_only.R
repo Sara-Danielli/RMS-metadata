@@ -26,6 +26,8 @@ source(file.path(resource_dir, "Plot_style_v2.R"))
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/analysis')
 if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
 
+genelist_dir <- file.path(base_dir, 'list_final')
+
 ## read file
 #PDX.integrated <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_20230710.rds"))
 PDX.integrated <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_20230202_scoring100.rds"))

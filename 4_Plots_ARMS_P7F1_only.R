@@ -20,6 +20,7 @@ resource_dir <- file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Da
 source(file.path(base_dir, "codes/MANUSCRIPT_INTEGRATION/metadata/FINAL/Functions.R"))
 source(file.path(resource_dir, "Plot_style_v2.R"))
 
+genelist_dir <- file.path(base_dir, 'list_final')
 
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/P7F1analysis')
 if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
@@ -420,4 +421,56 @@ DotPlot(P7F1,
   ) 
 ggsave(file.path(analysis_dir, paste0("23_DotPlot_FPsignature.pdf")), width=4.5, height=3.5, dpi=300)
 
+
+
+
+
+# Dotplot of gene signatures across clusters  -----------------------------------
+markers <- read.csv(file.path(genelist_dir, 'P7F1_cluster_markers.csv'))
+
+# rename DNA replication as Proliferative
+markers <- markers %>%
+  mutate_all(~ ifelse(. == 'DNA replication', 'Proliferative', .))
+
+
+# order by Annotation and fold change
+markers <- markers %>% arrange(cluster, desc(avg_log2FC))
+markers <- as.data.frame(markers)
+
+# convert into list
+marker_list <- split(markers[, -c(1:7)], f = markers$cluster)
+
+# select top 50 genes per cluster
+marker_list <- lapply(marker_list,head,50)
+
+
+# Score tumor programs 
+P7F1 <- AddModuleScore(object = P7F1, assay = 'RNA', features = marker_list, name = names(marker_list))
+P7F1 <- ScaleData(P7F1)
+
+# rename metadata names of scores
+col_start <- length(colnames(P7F1@meta.data)) - length(names(marker_list)) + 1
+# identify number of last column with metadata scores
+col_end <- length(colnames(P7F1@meta.data))
+# rename columns with score name
+colnames(P7F1@meta.data)[col_start:col_end] <- names(marker_list)
+
+# Dotplot
+DotPlot(P7F1, 
+        features = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'Neuronal'), 
+        group.by = 'Cluster assignment',
+        assay = 'RNA', 
+        #cols = c("white", "red3"),
+        scale = T,
+        #col.min = 0
+) + 
+  scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(analysis_dir, paste0("24_DotPlot__gene_signature.pdf")), width=4.5, height=4.0)
 

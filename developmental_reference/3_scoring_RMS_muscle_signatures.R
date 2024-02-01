@@ -90,6 +90,30 @@ for (i in seq_along(seurat_objects)){
           #legend.title = element_blank()
     ) 
   ggsave(file.path(plot_dir, paste0("2_DotPlot_scores_", names(seurat_objects)[i], ".pdf")), width=5.5, height=4.5, dpi=300)
+  
+  
+  # UMAP plot
+  DimPlot(seurat_objects[[i]], reduction = "umap_rpca", cols = col_cluster_names_aggregate, pt.size = 4, raster=TRUE, shuffle=TRUE, raster.dpi = c(1012, 1012)) 
+  ggsave(file.path(plot_dir, paste0("1_UMAP_", names(seurat_objects)[i], ".pdf")), width=5.5, height=4.5, dpi=300)
+  
+  # Dotplot scores
+  DotPlot(seurat_objects[[i]], 
+          features = names(muscle_signatures), 
+          #split.by = 'subtype',
+          assay = 'RNA', 
+          cols = c("white", "red3"),
+          col.min = 0, 
+          scale = FALSE)  + 
+    #scale_colour_distiller(palette="RdBu") +
+    theme(axis.line = element_line(colour = "black"),
+          axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+          axis.text.y = element_text(size=12, colour="black"),
+          axis.title=element_blank(),
+          legend.text = element_text(size = 12),
+          #legend.title = element_blank()
+    ) 
+  ggsave(file.path(plot_dir, paste0("2_DotPlot_scores_", names(seurat_objects)[i], ".pdf")), width=5.5, height=4.5, dpi=300)
+  
 }
 
 

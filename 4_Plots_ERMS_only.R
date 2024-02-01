@@ -22,6 +22,8 @@ resource_dir <- file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Da
 source(file.path(base_dir, "codes/MANUSCRIPT_INTEGRATION/metadata/FINAL/Functions.R"))
 source(file.path(resource_dir, "Plot_style_v2.R"))
 
+genelist_dir <- file.path(base_dir, 'list_final')
+
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/ERMSanalysis')
 if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
 
@@ -360,5 +362,61 @@ DotPlot(FNRMS,
   ) 
 ggsave(file.path(analysis_dir, paste0("21_DotPlot_scores_TBXT_SOX2.pdf")), width=5.5, height=4.5, dpi=300)
 
+
+
+
+# Dotplot of gene signatures across clusters  -----------------------------------
+markers <- read.csv(file.path(genelist_dir, 'ERMS_cluster_markers.csv'))
+
+# rename DNA replication as Proliferative
+markers <- markers %>%
+  mutate_all(~ ifelse(. == 'DNA replication', 'Proliferative', .)) %>%
+  mutate_all(~ ifelse(. == '4-Progenitor', 'Progenitor', .)) %>%
+  mutate_all(~ ifelse(. == '6-Progenitor', 'Progenitor', .))  %>%
+  mutate_all(~ ifelse(. == '2-Ground', 'Ground', .))
+
+# order by Annotation and fold change
+markers <- markers %>% arrange(cluster, desc(avg_log2FC))
+markers <- as.data.frame(markers)
+
+# convert into list
+marker_list <- split(markers[, -c(1:7)], f = markers$cluster)
+
+# select top 50 genes per cluster
+marker_list <- lapply(marker_list,head,50)
+
+
+# Score tumor programs 
+FNRMS <- AddModuleScore(object = FNRMS, assay = 'RNA', features = marker_list, name = names(marker_list))
+FNRMS <- ScaleData(FNRMS)
+
+# rename metadata names of scores
+col_start <- length(colnames(FNRMS@meta.data)) - length(names(marker_list)) + 1
+# identify number of last column with metadata scores
+col_end <- length(colnames(FNRMS@meta.data))
+# rename columns with score name
+colnames(FNRMS@meta.data)[col_start:col_end] <- names(marker_list)
+
+# Dotplot
+FNRMS$`Cluster assignment` <- factor(x = FNRMS$`Cluster assignment`, 
+                                                  levels = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN'))
+
+DotPlot(FNRMS, 
+        features = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN'), 
+        group.by = 'Cluster assignment',
+        assay = 'RNA', 
+        #cols = c("white", "red3"),
+        scale = T,
+        #col.min = 0
+) + 
+  scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(analysis_dir, paste0("24_DotPlot__gene_signature.pdf")), width=4.5, height=4.0)
 
 
