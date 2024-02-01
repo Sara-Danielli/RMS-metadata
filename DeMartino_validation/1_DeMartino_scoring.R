@@ -8,6 +8,7 @@ library(SeuratObject)
 library(readxl)
 library(data.table)
 library(ggpubr)
+library(cowplot)
 
 # Set up environment ------------------------------------------------
 base_dir <- '/Volumes/Sara_PhD/scRNAseq_data'
@@ -15,6 +16,10 @@ data_dir <- file.path(base_dir, 'data/DeMartino_Rds')
 genelist_dir <- file.path(base_dir, 'list_final')
 
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/DeMartino')
+
+resource_dir <- file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Manuscripts/2023 - Meta-data/GITHUB/RMS-metadata/Resources')
+source(file.path(resource_dir, "Plot_style_v2.R"))
+
 
 plot_dir <- file.path(analysis_dir, 'plot')
 if (!dir.exists(plot_dir)){dir.create(plot_dir, recursive = T)}
@@ -37,61 +42,91 @@ DeMartino<- RenameIdents(DeMartino, new.cluster.ids.aggregate)
 DeMartino[["subtype"]] <- Idents(object = DeMartino)
 
 # Load RMS atlas signatures
-Common_differentiated <- read_excel(file.path(genelist_dir, "Common_differentiated.xlsx"), col_names=FALSE)
-Common_differentiated <- as.list(Common_differentiated)
-Common_proliferative <- read_excel(file.path(genelist_dir,"Common_proliferative.xlsx"), col_names=FALSE)
-Common_proliferative <- as.list(Common_proliferative)
-Common_Stemcell <- read_excel(file.path(genelist_dir, "Common_Stemcell.xlsx"), col_names=FALSE)
-Common_Stemcell <- as.list(Common_Stemcell)
-
-signatures <- list(Common_differentiated, Common_proliferative, Common_Stemcell)
-names(signatures) <- list('RMS_differentiated', 'RMS_proliferative', 'RMS_progenitor')
+signatures <- read_excel(file.path(genelist_dir, "signatures_final.xlsx"), col_names=TRUE)
+signatures <- as.list(signatures)
+signatures <- sapply(signatures, function(x) x[!is.na(x)], simplify = FALSE)
+names(signatures) <- list('Differentiated score', 'Proliferative score', 'Progenitor score')
 
 # Score data ------------------------------------------------
-DeMartino <- AddModuleScore(object = DeMartino, features = Common_differentiated, name = 'Differentiated')
-DeMartino <- AddModuleScore(object = DeMartino, features = Common_proliferative, name = 'Proliferative')
-DeMartino <- AddModuleScore(object = DeMartino, features = Common_Stemcell, name = 'Progenitor')
+DeMartino <- AddModuleScore(object = DeMartino, assay = 'RNA', features = signatures, name = names(signatures))
 
-DeMartino$DS.Difference <- DeMartino$Differentiated1 - DeMartino$Progenitor1
+# rename metadata names of scores
+# identify number of first column with metadata scores
+col_start <- length(colnames(DeMartino@meta.data)) - length(names(signatures)) +1
+# identify number of last column with metadata scores
+col_end <- length(colnames(DeMartino@meta.data))
+# rename columns with score name
+colnames(DeMartino@meta.data)[col_start:col_end] <- names(signatures)
 
+# Add Muscle lineage score
+DeMartino$`Muscle lineage score` <- DeMartino$`Differentiated score` - DeMartino$`Progenitor score`
 
 # Scaling data
 DeMartino <- ScaleData(DeMartino)
 
+# Save data ------------------------------------------------
+saveRDS(DeMartino, file.path(base_dir, 'write/DeMartino_scored.rds'))
+
 
 # Plot data ------------------------------------------------
+scores <- c('Differentiated score', 'Proliferative score', 'Progenitor score', "Muscle lineage score")
+titles <- c('Differentiated score', 'Proliferative score', 'Progenitor score', "Muscle lineage score")
 
-Vln_scores <- c("Differentiated1", "Proliferative1", "Progenitor1", "DS.Difference")
-names(Vln_scores) <- c("Differentiated", "Proliferative", "Progenitor", "Muscle lineage score")
+p <- VlnPlot(DeMartino, features = scores, 
+             group.by = 'tumor_id',  
+             sort = 'decreasing',
+             split.by = 'subtype', 
+             cols = col_subtype,
+             pt.size=0) 
+
+for(i in 1:length(p)) {
+  p[[i]] <- p[[i]] + NoLegend() +
+    labs (y='Module score, AU', x='', title = titles[[i]]) + 
+    scale_fill_manual(values = col_subtype) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln
+}
+
+plot <- p[[1]] + p[[2]] + p[[3]]+ p[[4]] 
+plot
+
+ggsave(file.path(plot_dir, paste0("1_Vln_plot_scores.pdf")), width=12, height=10)
+
 
 ## Violin plots scores by sample
-for (a in 1:length(Vln_scores)) {
+for (a in 1:length(scores)) {
   VlnPlot(DeMartino,
-          features = Vln_scores[[a]], 
+          features = scores[[a]], 
           group.by = 'tumor_id',  
           sort = 'decreasing',
           split.by = 'subtype',  pt.size=0,  
-          cols = col_subtype) 
-  ggsave(file.path(plot_dir, paste0("1_Vln_plot_scores_name_",names(Vln_scores)[a],".pdf")), width=6, height=3.5, dpi=300)
+          cols = col_subtype) + 
+    labs (y='Module score, AU', x='', title = scores[a]) +  
+    scale_fill_manual(values = col_subtype) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + 
+    theme_vln
+  ggsave(file.path(plot_dir, paste0("2_Vln_plot_scores_name_",scores[a],".pdf")), width=7, height=4, dpi=300)
 }
 
 ## Violin plots scores by subtype
-for (a in 1:length(Vln_scores)) {
+for (a in 1:length(scores)) {
   VlnPlot(DeMartino,
-          features = Vln_scores[[a]], 
+          features = scores[[a]], 
           group.by = 'subtype',  
           sort = 'decreasing',
           pt.size=0,  
           cols = col_subtype) + 
-    labs (y='Module score, AU', x='', title = names(Vln_scores)[a]) + 
+    labs (y='Module score, AU', x='', title = scores[a]) + 
+    scale_fill_manual(values = col_subtype)  + 
     scale_fill_manual(values = col_subtype) + 
-    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") +
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln +
     stat_compare_means(aes(label = after_stat(p.signif)), 
                        method = 't.test', 
-                       ref.group = 'FN-RMS',
-                       size = 5, 
+                       #ref.group = 'FN-RMS',
+                       size = 6, 
                        label.y.npc = 0.91, 
-                       label.x.npc = 0.5) + 
+                       label.x.npc = 0.4) + 
     NoLegend() 
-  ggsave(file.path(plot_dir, paste0("2_Vln_plot_scores_subtype_",names(Vln_scores)[a],".pdf")), width=3, height=3.5, dpi=300)
+  ggsave(file.path(plot_dir, paste0("3_Vln_plot_scores_subtype_",scores[a],".pdf")), width=3, height=3.5, dpi=300)
 }
