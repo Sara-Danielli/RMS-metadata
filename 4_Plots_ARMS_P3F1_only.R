@@ -349,7 +349,7 @@ for (a in 1:length(Vln_scores)) {
 }
 
 
-# Dotplot scores
+# Dotplot scores of neuronal markers
 DotPlot(P3F1, 
         features = names(Vln_scores), 
         group.by = 'Cluster assignment',
@@ -366,3 +366,67 @@ DotPlot(P3F1,
         #legend.title = element_blank()
   ) 
 ggsave(file.path(analysis_dir, paste0("21_DotPlot_scores_TBXT_SOX2.pdf")), width=5.5, height=4.5, dpi=300)
+
+
+# Dotplot scores of myogenic markers
+myogenic_genes <- c('MYOD1', 'MYOG', 'DES')
+DotPlot(P3F1, 
+        features = myogenic_genes, 
+        group.by = 'Cluster assignment',
+        assay = 'RNA', 
+        cols = c("white", "red3"),
+        scale = F,
+        #col.min = 0
+        ) + 
+  #scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(analysis_dir, paste0("22_DotPlot_myogenic.pdf")), width=4.5, height=4, dpi=300)
+
+
+
+# Scoring tumors for FP-RMS signature ------------------------------------------------
+
+# read gene list (Fusion positive signature of Wei et al)
+FP_signature <- read_excel(file.path(base_dir, 'list_final/Wei_2022/FP.xlsx'), col_names = F)
+FP_signature <- as.list(FP_signature)
+names(FP_signature) <- 'FP signature'
+
+# read gene list (Fusion positive signature of Gryder et al 2020)
+
+# Score tumor programs for gene expression programs identified in Xi et al. --------------------
+P3F1 <- AddModuleScore(object = P3F1, assay = 'RNA', features = FP_signature, name = names(FP_signature))
+P3F1 <- ScaleData(P3F1)
+
+# rename metadata names of scores
+col_start <- length(colnames(P3F1@meta.data)) - length(names(FP_signature)) + 1
+# identify number of last column with metadata scores
+col_end <- length(colnames(P3F1@meta.data))
+# rename columns with score name
+colnames(P3F1@meta.data)[col_start:col_end] <- names(FP_signature)
+
+
+# Dotplot scores of FP signature ------------------------------------------
+DotPlot(P3F1, 
+        features = "FP signature", 
+        group.by = 'Cluster assignment',
+        assay = 'RNA', 
+        cols = c("white", "red3"),
+        scale = F,
+        #col.min = 0
+) + 
+  #scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(analysis_dir, paste0("23_DotPlot_FPsignature.pdf")), width=4.5, height=3.5, dpi=300)
+

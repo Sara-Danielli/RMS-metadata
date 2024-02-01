@@ -13,12 +13,15 @@ library(paletteer)
 library(SeuratObject)
 library(SCpubr)
 library(readxl)
+library(clustree)
+library(cowplot)
 
 base_dir <- '/Volumes/Sara_PhD/scRNAseq_data'
 list_dir <- '/Volumes/Sara_PhD/scRNAseq_data/list_final'
 
-#base_dir <- "/n/scratch3/users/s/sad167/metadata"
+resource_dir <- file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Manuscripts/2023 - Meta-data/GITHUB/RMS-metadata/Resources')
 source(file.path(base_dir, "codes/MANUSCRIPT_INTEGRATION/metadata/FINAL/Functions.R"))
+source(file.path(resource_dir, "Plot_style_v2.R"))
 
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/analysis')
 if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
@@ -496,3 +499,51 @@ DotPlot(RMS.integrated,
         #legend.title = element_blank()
   ) 
 ggsave(file.path(plot_dir, paste0("2_DotPlot_scores_", names(seurat_objects)[i], ".pdf")), width=5.5, height=4.5, dpi=300)
+
+
+# Plot Clustree  --------------------------------------------------------------------------
+# re-run Louvain clusters with different resolutions
+PDX.integrated <- FindClusters(PDX.integrated, resolution = seq(0, 1, 0.1))
+
+# Plot Clustree 
+clustree(PDX.integrated)
+ggsave(file.path(analysis_dir,"21_Clustree_res_01_1.pdf"), width=8, height=10, dpi=300)
+
+
+# Dot/Vln plot progenitor/differentiated scores for each population ------------------------------------------
+DotPlot(RMS.integrated, 
+        features = c("Progenitor score", "Differentiated score"), 
+        group.by = 'Cluster assignment',
+        assay = 'RNA', 
+        cols = c("white", "red3"),
+        scale = F,
+        #col.min = 0
+) + 
+  #scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave(file.path(analysis_dir, paste0("22_DotPlot_Progenitor_differentiated_score.pdf")), width=4.5, height=5, dpi=300)
+
+
+
+scores <- c("Progenitor score", "Differentiated score")
+titles <- c("Progenitor score", "Differentiated score")
+
+p <- VlnPlot(RMS.integrated, features = scores, group.by = 'Cluster assignment', combine = FALSE, pt.size=0, cols = col_model) 
+
+for(i in 1:length(p)) {
+  p[[i]] <- p[[i]] + NoLegend() +
+    labs (y='Module score, AU', x='', title = titles[[i]]) + 
+    scale_fill_manual(values = col_cluster_names_aggregate_integrated) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln
+}
+plot_grid(plotlist = p, ncol=2)
+ggsave(file.path(analysis_dir, paste0("23_VlnPlot_Progenitor_differentiated_score.pdf")), width=8, height=5, dpi=300)
+
+
