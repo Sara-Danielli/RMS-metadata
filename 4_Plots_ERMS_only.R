@@ -405,9 +405,9 @@ DotPlot(FNRMS,
         features = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN'), 
         group.by = 'Cluster assignment',
         assay = 'RNA', 
-        #cols = c("white", "red3"),
-        scale = T,
-        #col.min = 0
+        scale.min = 100,
+        scale.max = 100,
+        dot.scale=10
 ) + 
   scale_colour_distiller(palette="RdBu") +
   theme(axis.line = element_line(colour = "black"),
@@ -418,5 +418,4 @@ DotPlot(FNRMS,
         #legend.title = element_blank()
   ) 
 ggsave(file.path(analysis_dir, paste0("24_DotPlot__gene_signature.pdf")), width=4.5, height=4.0)
-
 

@@ -397,29 +397,38 @@ ggsave(file.path(analysis_dir, paste0("22_DotPlot_myogenic.pdf")), width=4.5, he
 # read gene list (Fusion positive signature of Wei et al)
 FP_signature <- read_excel(file.path(base_dir, 'list_final/Wei_2022/FP.xlsx'), col_names = F)
 FP_signature <- as.list(FP_signature)
-names(FP_signature) <- 'FP signature'
+names(FP_signature) <- 'FP-RMS signature (Wei et al)'
 
 # read gene list (Fusion positive signature of Gryder et al 2020)
+FP_target_signature <- read_excel(file.path(base_dir, 'list_final/Berkley_Gryder_P3F1_target_genes.xlsx'), col_names = F)
+FP_target_signature <- as.list(FP_target_signature)
+names(FP_target_signature) <- 'PAX3::FOXO1 targets (Gryder et al)'
+
+# combine lists
+FP_genes <- c(FP_signature, FP_target_signature)
 
 # Score tumor programs for gene expression programs identified in Xi et al. --------------------
-P3F1 <- AddModuleScore(object = P3F1, assay = 'RNA', features = FP_signature, name = names(FP_signature))
+P3F1 <- AddModuleScore(object = P3F1, assay = 'RNA', features = FP_genes, name = names(FP_genes))
 P3F1 <- ScaleData(P3F1)
 
 # rename metadata names of scores
-col_start <- length(colnames(P3F1@meta.data)) - length(names(FP_signature)) + 1
+col_start <- length(colnames(P3F1@meta.data)) - length(names(FP_genes)) + 1
 # identify number of last column with metadata scores
 col_end <- length(colnames(P3F1@meta.data))
 # rename columns with score name
-colnames(P3F1@meta.data)[col_start:col_end] <- names(FP_signature)
+colnames(P3F1@meta.data)[col_start:col_end] <- names(FP_genes)
 
 
 # Dotplot scores of FP signature ------------------------------------------
 DotPlot(P3F1, 
-        features = "FP signature", 
+        features = names(FP_genes), 
         group.by = 'Cluster assignment',
         assay = 'RNA', 
         cols = c("white", "red3"),
         scale = F,
+        scale.min = 100,
+        scale.max = 100,
+        dot.scale=10,
         #col.min = 0
 ) + 
   #scale_colour_distiller(palette="RdBu") +
@@ -430,7 +439,7 @@ DotPlot(P3F1,
         legend.text = element_text(size = 12),
         #legend.title = element_blank()
   ) 
-ggsave(file.path(analysis_dir, paste0("23_DotPlot_FPsignature.pdf")), width=4.5, height=3.5, dpi=300)
+ggsave(file.path(analysis_dir, paste0("23_DotPlot_FPsignature.pdf")), width=4.5, height=6.5, dpi=300)
 
 
 
@@ -474,7 +483,9 @@ ggsave(file.path(analysis_dir, paste0("23_DotPlot_FPsignature.pdf")), width=4.5,
           assay = 'RNA', 
           #cols = c("white", "red3"),
           scale = T,
-          #col.min = 0
+          scale.min = 100,
+          scale.max = 100,
+          dot.scale=10
   ) + 
     scale_colour_distiller(palette="RdBu") +
     theme(axis.line = element_line(colour = "black"),
@@ -484,6 +495,6 @@ ggsave(file.path(analysis_dir, paste0("23_DotPlot_FPsignature.pdf")), width=4.5,
           legend.text = element_text(size = 12),
           #legend.title = element_blank()
     ) 
-  ggsave(file.path(analysis_dir, paste0("24_DotPlot__gene_signature.pdf")), width=5, height=4.5)
+  ggsave(file.path(analysis_dir, paste0("24_DotPlot__gene_signature.pdf")), width=5, height=4)
   
   

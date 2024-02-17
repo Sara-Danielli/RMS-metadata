@@ -305,7 +305,7 @@ column_ha = HeatmapAnnotation(df = annotation_info,
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'DCX', 'SYT1', 'L1CAM', 'STMN4')
+elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'SYP', 'L1CAM', 'CHGA')
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -429,7 +429,7 @@ column_ha = HeatmapAnnotation(df = annotation_info,
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'DCX', 'SYT1', 'L1CAM', 'STMN4')
+elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'SYP', 'L1CAM', 'CHGA')
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
