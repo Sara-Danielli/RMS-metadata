@@ -13,15 +13,14 @@ library(paletteer)
 library(stringr)
 options(Seurat.object.assay.version = "v5")
 
-##################################################################
-#  (0) Set up directories and environment:  #
-##################################################################
-
+# Set up environment ------------------------------------------------
 base_dir <- file.path('/Volumes/Sara_PhD/scRNAseq_data')
 Xi_dir <- file.path(base_dir, 'RMS/Xi_Cell_stem_cell_2020')
 genelist_dir <- file.path(base_dir, 'list_final')
 
-# color scheme
+source(file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Manuscripts/2023 - Meta-data/GITHUB/RMS-metadata/Resources/Plot_style_v2.R'))
+
+# color palette
 #colors populations
 col_celltype <- c('#C70E7BFF', '#FC6882FF',  '#6C6C9DFF',  '#A6E000FF','#1BB6AFFF','#172869FF')
 names(col_celltype) <- c('Myogenic progenitors', 'Myoblasts-myocyte', 'Skeletal mesenchymal', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells')
@@ -31,12 +30,10 @@ col_timepoints <- c('#9E0142FF', '#D53E4FFF', '#F46D43FF', '#F46D43FF', '#FDAE61
                     '#FFFFBFFF',   '#E6F598FF', '#ABDDA4FF', '#66C2A5FF', '#3288BDFF', 
                     c(rep('#5E4FA2FF', 4)), 'grey')
 names(col_timepoints) <- c("Wk5.0", "Wk6.0" ,  "Wk6.5", "Wk7.0", "Wk7.25",  "Wk7.75" , "Wk9" ,   "Wk12",   "Wk14", "Wk17" ,  "Wk18", 
-                           "Yr7",    "Yr11",   "Yr34," ,  "Yr42", NA)
+                           "Yr7",    "Yr11",   "Yr34" ,  "Yr42", NA)
 
 
-##################################################################
-#  (1) Load human muscle dataset Xi et al. 2020:  #
-##################################################################
+# Load data ------------------------------------------------
 
 # load human development datasets Xi et al. 2020 Stem Cell
 week5_6 <- read.table(file.path(Xi_dir, 'myogenic_datasets/week5_6/exprMatrix.tsv'), sep = '\t', header=TRUE, row.names=1)
@@ -80,7 +77,7 @@ adult <- CreateSeuratObject(counts = adult, project = "Xi_2020")
 adult <- AddMetaData(adult, metadata = adult_meta)
 
 
-
+# merge data  ------------------------------------------------
 merged_Xietal <- merge(week5_6, y = list(week6_7, week7_8, week9, week12_14, week17_18, juvenile, adult),
                        add.cell.ids = c('week5_6', 'week6_7', 'week7_8', 'week9', 'week12_14', 'week17_18', 'juvenile', 'adult'),
                        project = "development_Xi_2020")
@@ -93,7 +90,7 @@ DefaultAssay(merged_Xietal) <- "RNA"
 # Define mitochondrial genes
 merged_Xietal[["percent.mt"]] <- PercentageFeatureSet(merged_Xietal, pattern = "^MT-")
 
-# Refine metadata annotations
+# Refine metadata annotations  ------------------------------------------------
 # (1) add cell type info
 cellname <- colnames(merged_Xietal)
 celltype <- unlist(str_split(merged_Xietal@meta.data$Cell.Type, "-", n = 1))
@@ -135,14 +132,7 @@ metadata <- metadata %>%
 # Add new metadata to Seurat objetct
 merged_Xietal <- AddMetaData(merged_Xietal, metadata)
 
-#save object  
-saveRDS(merged_Xietal, file = "/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_Xietal.rds")
-
-merged_Xietal <- readRDS("/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_Xietal.rds")
-
-##################################################################
-#  (2) Downstream analyses:  #
-##################################################################
+# Downstream analysis Seurat object ------------------------------------------------
 
 ## Data normalization
 merged_Xietal <- NormalizeData(merged_Xietal, normalization.method = "LogNormalize", scale.factor = 10000)
@@ -159,17 +149,23 @@ Common_proliferative <- as.list(Common_proliferative)
 Common_Stemcell <- read_excel(file.path(genelist_dir, "Common_Stemcell.xlsx"), col_names=FALSE)
 Common_Stemcell <- as.list(Common_Stemcell)
 
-signatures <- list(Common_differentiated, Common_proliferative, Common_Stemcell)
-names(signatures) <- list('RMS_differentiated', 'RMS_proliferative', 'RMS_progenitor')
+signatures <- c(Common_differentiated, Common_proliferative, Common_Stemcell)
+names(signatures) <- list('Differentiated score', 'Proliferative score', 'Progenitor score')
 
-## score
-merged_Xietal <- AddModuleScore(object = merged_Xietal, features = Common_differentiated, name = 'Differentiated')
-merged_Xietal <- AddModuleScore(object = merged_Xietal, features = Common_proliferative, name = 'Proliferative')
-merged_Xietal <- AddModuleScore(object = merged_Xietal, features = Common_Stemcell, name = 'Progenitor')
+# select top 25 genes per signature
+signatures <- lapply(signatures,head,25)
 
-
-# Scaling data
+# Score for metaprograms  ----------------------------------
+merged_Xietal <- AddModuleScore(object = merged_Xietal, assay = 'RNA', features = signatures, name = names(signatures))
 merged_Xietal <- ScaleData(merged_Xietal)
+
+# rename metadata names of scores
+col_start <- length(colnames(merged_Xietal@meta.data)) - length(names(signatures)) + 1
+# identify number of last column with metadata scores
+col_end <- length(colnames(merged_Xietal@meta.data))
+# rename columns with score name
+colnames(merged_Xietal@meta.data)[col_start:col_end] <- names(signatures)
+
 
 ## Dimension reduction
 merged_Xietal
@@ -184,7 +180,7 @@ merged_Xietal$celltype <- factor(x = merged_Xietal$celltype,
                                  levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
                                             "Skeletal mesenchymal",  "Postnatal satellite cells")) 
 
-# PCA plots
+# Plot PCA
 DimPlot(merged_Xietal, reduction = "pca_no_regression", group.by = 'celltype', cols = col_celltype) + NoAxes()
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/1_PCA_celltype.pdf", 
        width=10, height=5, dpi=300)
@@ -194,13 +190,20 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/2_Elbowplot.p
        width=6, height=4, dpi=300)
 
 
-## Cluster cells
+# Cluster cells
 merged_Xietal <- FindNeighbors(merged_Xietal, reduction = 'pca_no_regression', dims = 1:10)
 
-# UMAP
+# Plot UMAP
 merged_Xietal <- RunUMAP(merged_Xietal, dims = 1:10, reduction = 'pca_no_regression', reduction.name = 'UMAP_no_regression')
 
-## Plots
+# save object  ------------------------------------------------------------
+saveRDS(merged_Xietal, file = "/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_Xietal.rds")
+
+merged_Xietal <- readRDS("/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_Xietal.rds")
+
+
+
+## Plots ------------------------------------------------------------
 DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'timepoint', cols = col_timepoints) + NoAxes()
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_celltype_col1.pdf", 
        width=12, height=5, dpi=300)
@@ -211,8 +214,7 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_cellty
 
 
 # UMAP plot of RMS scores
-scores <- c('Progenitor1', 'Proliferative1', 'Differentiated1')
-p <- FeaturePlot(merged_Xietal, features = scores, reduction = "UMAP_no_regression", combine = FALSE, order = TRUE, pt.size = 2, raster=TRUE)
+p <- FeaturePlot(merged_Xietal, features = names(signatures), reduction = "UMAP_no_regression", combine = FALSE, order = TRUE, pt.size = 2, raster=TRUE)
 for(i in 1:length(p)) {
   p[[i]] <- p[[i]] + NoAxes() + scale_colour_distiller(palette="RdBu")
 }
@@ -225,10 +227,12 @@ merged_Xietal$celltype <- factor(x = merged_Xietal$celltype,
                                  levels = c("Postnatal satellite cells",  "Skeletal mesenchymal", "Myocytes", "Myoblasts",
                                             "Myoblasts-myocyte", "Myogenic progenitors"))
 
-DotPlot(merged_Xietal, features = scores,
+DotPlot(merged_Xietal, features = rev(names(signatures)),
         group.by = 'celltype',
         assay = 'RNA', 
-        col.min = 0, 
+        scale.min = 100,
+        scale.max = 100,
+        dot.scale=10,
         cols = c("white", "red3"),
         scale = FALSE)  + 
   #scale_colour_distiller(palette="RdBu") +
@@ -244,9 +248,11 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/5_DotPlot_sco
 
 DotPlot(merged_Xietal, 
         group.by = 'timepoint',
-        features = scores, 
+        features = rev(names(signatures)),
         assay = 'RNA', 
-        col.min = 0, 
+        scale.min = 100,
+        scale.max = 100,
+        dot.scale=10,
         cols = c("white", "red3"),
         scale = FALSE)  + 
   #scale_colour_distiller(palette="RdBu") +
@@ -262,41 +268,128 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/5_DotPlot_sco
 
 
 
-########### FIND CLUSTER MARKERS ###########
+# Identify cluster markers (by cell type and time point) ------------------------------------------
+
+# define celltype markers and select top 25 marker genes
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
                                  levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
                                             "Skeletal mesenchymal",  "Postnatal satellite cells")) 
 Idents(merged_Xietal) = 'celltype'
+muscle.markers <- FindAllMarkers(merged_Xietal, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.3, test.use = 'negbinom')
 
-
-merged_Xietal.markers <- FindAllMarkers(merged_Xietal, only.pos = TRUE, min.pct = 0.3, logfc.threshold = 1)
-write.csv(merged_Xietal.markers, "/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/7_markers.csv")
-
+genes_per_cluster = 25
+top_genes <- muscle.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = genes_per_cluster, order_by = avg_log2FC)
+# save as csv
+write.csv(muscle.markers, "/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/7_markers_celltype.csv")
 # save as list
-marker_list <- split(merged_Xietal.markers[, -c(1:6)], f = merged_Xietal.markers$cluster)
-saveRDS(marker_list, file.path(base_dir, 'output/metadata/dev_muscle/7_markers.rds'))
+muscle.markers <- muscle.markers %>% arrange(cluster, desc(avg_log2FC))
+muscle.markers_list <- split(muscle.markers[, -c(1:6)], f = muscle.markers$cluster)
+saveRDS(muscle.markers_list, file.path(base_dir, 'output/metadata/dev_muscle/7_markers_celltype_list.rds'))
 
 
-plot_bar <-ggplot(merged_Xietal@meta.data, aes(x=orig.ident.short, fill= (merged_Xietal@meta.data$celltype))) + 
-  geom_bar(position = "fill", color="black") +
-  scale_fill_manual(values = col_celltype) +
-  labs (y='Proportion', x='') + 
-  theme(panel.border = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        plot.background = element_rect(fill='transparent', color=NA),
-        axis.line = element_line(colour = "black"),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-plot_bar
+# define celltime point  markers and select top 25 marker genes
+Idents(merged_Xietal) <- 'timepoint'
+muscle.time.markers <- FindAllMarkers(merged_Xietal, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.3, test.use = 'negbinom')
+
+genes_per_cluster = 25
+top_genes.cell <- muscle.time.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = genes_per_cluster, order_by = avg_log2FC)
+# save as csv
+write.csv(muscle.time.markers, "/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/7_markers_timepoint.csv")
+# save as list
+muscle.time.markers <- muscle.time.markers %>% arrange(cluster, desc(avg_log2FC))
+muscle.time.markers_list <- split(muscle.time.markers[, -c(1:6)], f = muscle.time.markers$cluster)
+saveRDS(muscle.time.markers_list, file.path(base_dir, 'output/metadata/dev_muscle/7_markers_timepoint_list.rds'))
+
+
+# Plot cell type distribution ------------------------------------------
+
+# reorder labels
+merged_Xietal$timepoint <- factor(x = merged_Xietal$timepoint, 
+                                  levels = c("Wk5.0", "Wk6.0" ,  "Wk6.5", "Wk7.0", "Wk7.25",  "Wk7.75" , "Wk9" ,   "Wk12",   "Wk14", "Wk17" ,  "Wk18", 
+                                             "Yr7",    "Yr11",   "Yr34" ,  "Yr42"))
+
+merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
+                                 levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
+                                            "Skeletal mesenchymal",  "Postnatal satellite cells")) 
+
+
+plot_bar(merged_Xietal, merged_Xietal$timepoint, merged_Xietal$celltype, col = col_celltype) 
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/4_cell_composition_pop.pdf", 
-       width=10, height=4, dpi=300)
+       width=8, height=4)
 
-## Calculate number of cells within each cluster
-library(data.table)
-md <- merged_Xietal@meta.data %>% as.data.table
-md[, .N, by = c("orig.ident.short", "orig.ident.short_cell.type")]
-table_PDX <- md[, .N, by = c("orig.ident.short", "orig.ident.short_cell.type")] %>% dcast(., orig.ident.short ~ orig.ident.short_cell.type, value.var = "N")
-write.csv(table_PDX, "/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/5_Cluster_information_name.csv")
+plot_bar(merged_Xietal, merged_Xietal$celltype, merged_Xietal$timepoint, col = col_timepoints) 
+ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/4_cell_composition_timepoints.pdf", 
+       width=4, height=5)
 
+
+# Scoring cells for FN-RMS metaprograms   ------------------------------------------
+merged_Xietal <- readRDS("/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_Xietal.rds")
+
+## Data normalization
+merged_Xietal <- NormalizeData(merged_Xietal, normalization.method = "LogNormalize", scale.factor = 10000)
+## Highly variable features
+merged_Xietal <- FindVariableFeatures(merged_Xietal, selection.method = "vst", nfeatures = 2000)
+
+# load gene lists -----------------------------------
+markers <- read.csv(file.path(genelist_dir, 'ERMS_cluster_markers.csv'))
+
+# rename DNA replication as Proliferative
+markers <- markers %>%
+  mutate_all(~ ifelse(. == 'DNA replication', 'Proliferative', .)) %>%
+  mutate_all(~ ifelse(. == '4-Progenitor', 'Progenitor', .)) %>%
+  mutate_all(~ ifelse(. == '6-Progenitor', 'Progenitor', .))  %>%
+  mutate_all(~ ifelse(. == '2-Ground', 'Ground', .))
+
+# order by Annotation and fold change
+markers <- markers %>% arrange(cluster, desc(avg_log2FC))
+markers <- as.data.frame(markers)
+
+# convert into list
+marker_list <- split(markers[, -c(1:7)], f = markers$cluster)
+
+# Remove duplicates within each vector
+marker_list <- lapply(marker_list, unique)
+
+# select top 25 genes per cluster
+marker_list <- lapply(marker_list,head,25)
+
+
+# Score for metaprograms  --------------------
+merged_Xietal <- AddModuleScore(object = merged_Xietal, assay = 'RNA', features = marker_list, name = names(marker_list))
+merged_Xietal <- ScaleData(merged_Xietal)
+
+# rename metadata names of scores
+col_start <- length(colnames(merged_Xietal@meta.data)) - length(names(marker_list)) + 1
+# identify number of last column with metadata scores
+col_end <- length(colnames(merged_Xietal@meta.data))
+# rename columns with score name
+colnames(merged_Xietal@meta.data)[col_start:col_end] <- names(marker_list)
+
+merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
+                                     levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",                
+                                                "Myocytes", "Skeletal mesenchymal", "Postnatal satellite cells"))
+
+DotPlot(merged_Xietal, features = c('IFN', 'Differentiated', 'Ground', 'Proliferative', 'Progenitor'),
+        group.by = 'celltype',
+        assay = 'RNA', 
+        scale.min = 100,
+        scale.max = 100,
+        dot.scale=10,
+        cols = c("white", "red3"),
+        scale = FALSE)  + 
+  #scale_colour_distiller(palette="RdBu") +
+  theme(axis.line = element_line(colour = "black"),
+        axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+        axis.text.y = element_text(size=12, colour="black"),
+        axis.title=element_blank(),
+        legend.text = element_text(size = 12),
+        #legend.title = element_blank()
+  ) 
+ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/6_DotPlot_scores_FNRMS.pdf", 
+       width=5, height=3, dpi=300)
 
 

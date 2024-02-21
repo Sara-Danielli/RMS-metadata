@@ -16,10 +16,12 @@ library(ggpubr)
 
 # Organize environment  -----------------------------------
 base_dir <- '/Volumes/Sara_PhD/scRNAseq_data'
+#base_dir <- '/n/scratch/users/s/sad167'
 
 genelist_dir <- file.path(base_dir, 'list_final')
 
 analysis_dir <- file.path(base_dir, 'output/metadata/Patel_Danielli_Langenau/RPCA_name/heatmap')
+#analysis_dir <- file.path(base_dir, 'heatmap')
 
 plot_dir <- file.path(analysis_dir, 'plot')
 if (!dir.exists(plot_dir)){dir.create(plot_dir, recursive = T)}
@@ -71,8 +73,8 @@ markers <- as.data.frame(markers)
 # convert into list
 marker_list <- split(markers[, -c(1:7)], f = markers$cluster)
 
-# select top 10 genes per cluster
-marker_list <- lapply(marker_list,head,100)
+# select top 100 genes per cluster
+#marker_list <- lapply(marker_list,head,100)
 
 
 # Subset seurat object to genes of interest -----------------------------------
@@ -101,8 +103,9 @@ row_ha = rowAnnotation(Group = genes_df$Group)
 elements_to_find <- c('FN1', 'CAV1', 'PAX7', 'MEOX2', 'CD44', 
                       'MYOD1', 'MYOG', 'MYH3', 
                       'MKI67', 'CENPF', 
-                      'TTN', 'MYL4', 
-                      'SYP', 'L1CAM', 'CHGA', 'DCX', 'STMN4')
+                      'TTN', #'MYL4', 
+                      'SYP', 'L1CAM', 'CHGA', #'DCX', 'STMN4'
+                      )
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -114,7 +117,7 @@ col_fun = colorRamp2(c(-1, 0, 1), c("#2E5A87FF", "#FCFDFEFF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_P3F1_heatmap_aggregate_50.pdf"), width=5, height=6)
+Cairo::CairoPDF(file.path(plot_dir, "1_P3F1_heatmap_aggregate_all.pdf"), width=5, height=6)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -172,8 +175,8 @@ marker_list <- split(markers[, -c(1:7)], f = markers$cluster)
 # Remove duplicates within each vector
 marker_list <- lapply(marker_list, unique)
 
-# select top 10 genes per cluster
-marker_list <- lapply(marker_list,head,100)
+# select top 100 genes per cluster
+#marker_list <- lapply(marker_list,head,100)
 
 
 # Subset seurat object to genes of interest -----------------------------------
@@ -210,7 +213,7 @@ col_fun = colorRamp2(c(-1, 0, 1), c("#2E5A87FF", "#FCFDFEFF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_P7F1_heatmap_aggregate_50.pdf"), width=5, height=6)
+Cairo::CairoPDF(file.path(plot_dir, "1_P7F1_heatmap_aggregate_all.pdf"), width=5, height=6)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -235,28 +238,32 @@ dev.off()
 # -----------------------------------------------------------------------
 # (4) Heatmap top marker genes FN-RMS clusters
 # -----------------------------------------------------------------------
-
 # load Seurat object -----------------------------------
-ERMS <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_ERMS_20230713.rds"))
-  # rename ERMS (problem with current IDs)
-  Idents(ERMS) = "cluster_names"
-  new.cluster.ids.aggregate <- c('Progenitor', 'Progenitor', 'Proliferative',  'Differentiated', 'IFN',  'Proliferative', 'Ground', 'Ground')
-  names(new.cluster.ids.aggregate) <- levels(ERMS)
-  ERMS<- RenameIdents(ERMS, new.cluster.ids.aggregate)
-  ERMS[["cluster_names_aggregate"]] <- Idents(object = ERMS)
-  levels(ERMS) <- c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN')
+ERMS <- readRDS(file.path(base_dir, "data/Danielli_Patel_Langenau_RPCA_ERMS_20230713.rds"))
+# rename ERMS (problem with current IDs)
+Idents(ERMS) = "cluster_names"
+new.cluster.ids.aggregate <- c('Progenitor', 'Progenitor', 'Proliferative',  'Differentiated', 'IFN',  'Proliferative', 'Ground', 'Ground')
+names(new.cluster.ids.aggregate) <- levels(ERMS)
+ERMS <- RenameIdents(ERMS, new.cluster.ids.aggregate)
+ERMS[["cluster_names_aggregate"]] <- Idents(object = ERMS)
 
+#reorder
+ERMS$cluster_names_aggregate <- factor(x = ERMS$cluster_names_aggregate , 
+                                       levels = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN'))
 # rename subtype
 metadata <- ERMS@meta.data
 
 # rename DS.Difference_common score into lineage score
-colnames(ERMS@meta.data)[32] <- "Cluster_assignment"
+colnames(ERMS@meta.data)[32] <- "cluster_names_aggregate"
 
 
 # save metadata as df
 metadata <- data.frame(ERMS@meta.data)
 
+# aggregate cells from same cluster -----------------------------------
+Idents(ERMS) <- 'cluster_names_aggregate'
 
+ERMS <- AggregateExpression(ERMS, return.seurat = TRUE)
 
 # load gene lists -----------------------------------
 markers <- read.csv(file.path(genelist_dir, 'ERMS_cluster_markers.csv'))
@@ -275,14 +282,13 @@ markers <- as.data.frame(markers)
 # convert into list
 marker_list <- split(markers[, -c(1:7)], f = markers$cluster)
 
-# select top 10 genes per cluster
-marker_list <- lapply(marker_list,head,100)
+# Remove duplicates within each vector
+marker_list <- lapply(marker_list, unique)
 
-# aggregate cells from same cluster -----------------------------------
-# first, Diet object (otherwise memory error)
-ERMS <- DietSeurat(ERMS, features = markers$gene)
+# select top 100 genes per cluster
+#marker_list <- lapply(marker_list,head,100)
 
-ERMS <- AggregateExpression(ERMS, return.seurat = TRUE)
+
 
 
 # Subset seurat object to genes of interest -----------------------------------
@@ -305,28 +311,17 @@ seurat_df <- seurat_df - rowMeans(seurat_df)
 seurat_df <- as.data.frame(seurat_df)
 
 
-# define annotations (important: order based on new order of cells)
-metadata2 <- metadata[colnames(seurat_df), ]
-metadata <- metadata2
-annotation_info <- metadata[, c("Cluster_assignment")]
-
-
-# define colors  -----------------------------------
-# Color Louvain clusters
-col_Cluster_assignment <-  c("#7FBC41FF", '#FFAD72FF', '#FFE5CCFF', "#8E0152FF",'#B497E7FF')
-names(col_Cluster_assignment) <- c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN')
-
-col_column_ha <- list(Cluster_assignment = col_Cluster_assignment)
-
-
-# define column annotation
-column_ha = HeatmapAnnotation(df = annotation_info,
-                              col = col_column_ha)
-
 # define row annotation
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
+elements_to_find <- c('FN1', 'CAV1', 'PAX7', 'MEOX2', 'CD44', 
+                      'MYOD1', 'MYOG', 'MYH3', 
+                      'MKI67', 'CENPF', 
+                      'TTN', #'MYL4', 
+                      'SYP', 'L1CAM', 'CHGA' # #'DCX', 'STMN4'
+)
+
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -338,7 +333,7 @@ col_fun = colorRamp2(c(-1, 0, 1), c("#2E5A87FF", "#FCFDFEFF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_ERMS_heatmap_aggregate_50.pdf"), width=6, height=8)
+Cairo::CairoPDF(file.path(plot_dir, "1_ERMS_heatmap_aggregate_all.pdf"), width=5, height=6)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -347,7 +342,7 @@ ht <- Heatmap(seurat_df,
               border = TRUE,
               row_split = factor(c(genes_df$Group), 
                                  levels = c('Progenitor', 'Proliferative', 'Ground', 'Differentiated', 'IFN')),
-              top_annotation = column_ha,
+              #top_annotation = column_ha,
               right_annotation = right_ha,
               use_raster = TRUE,
               raster_quality = 10,
@@ -356,4 +351,5 @@ ht <- Heatmap(seurat_df,
               row_names_rot = 30
 )
 draw(ht)
+dev.off()
 

@@ -32,7 +32,7 @@ if (!dir.exists(write_dir)){dir.create(write_dir, recursive = T)}
 # -----------------------------------------------------------------------
 
 # load Seurat object -----------------------------------
-P3F1 <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_20230202_scoring100.rds"))
+PDX.combined <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_20230202_scoring100.rds"))
 
 # rename subtype
   metadata <- PDX.combined@meta.data
@@ -64,7 +64,7 @@ markers <- as.data.frame(markers)
 # convert into list
 marker_list <- split(markers[, -c(2:7)], f = markers$Annotation)
 
-# select top 10 genes per cluster
+# select top 50 genes per cluster
 marker_list <- lapply(marker_list,head,50)
 
 
@@ -98,44 +98,10 @@ seurat_df <- seurat_df[, ordered_rows]
 # define annotations (important: order based on new order of cells)
 metadata2 <- metadata[colnames(seurat_df), ]
 metadata <- metadata2
-annotation_info <- metadata[, c(
-  #"name", 
-  "subtype", "model", "Cluster_assignment", "Cycling_prop", "Muscle_lineage_score")]
+annotation_info <- metadata[, c("subtype",  "Cluster_assignment", "Cycling_prop", "Muscle_lineage_score")]
 
 
 # define colors  -----------------------------------
-# Color model
-col_model <- c("#009B9EFF","#A7D3D4FF",  "#E4C1D9FF","#C75DABFF")
-names(col_model) <- c("Patient", "O-PDX", "Primary culture", "Cell line")
-
-# Color origin
-col_origin <- paletteer::paletteer_d("ggthemes::excel_Slice", n=4)
-names(col_origin) <- c("Wei et al.", "Patel et al.", "Danielli et al.", "Weng et al.")
-
-# Color name
-col_aRMS <- paletteer::paletteer_c("ggthemes::Blue-Teal", n = 27)
-col_eRMS <- paletteer::paletteer_c("ggthemes::Purple", n = 45)
-col_name <- c(col_aRMS, col_eRMS)
-names(col_name) <- c('20082',  'aRMS-1',  'aRMS-2', 'aRMS-3', 
-                     'aRMS-4',  'aRMS-5', 'KFR', 'Mast118', 
-                     'Mast95', 'MSK72117', 'MSK72117_SC', 
-                     'MSK82489', 'Rh4',  'Rh41',   'RMS', 
-                     'SJRHB010468_D1',  'SJRHB010468_X1', 'SJRHB013757_D2', 
-                     'SJRHB013757_X1', 'SJRHB013759_A1',  'SJRHB013759_A2', 
-                     'SJRHB013759_X14','SJRHB013759_X15', 'SJRHB031320_D1', 
-                     'SJRHB031320_X1', 'SJRHB046156_A1', 'SJRHB046156_X1', 
-                     '20696','21202', '29806', 
-                     'eRMS-1.1','eRMS-1.2',  'eRMS-2.1', 'eRMS-2.2', 
-                     'eRMS-3.2','eRMS-4',  'eRMS-8.1', 'eRMS-8.2', 
-                     'eRMS-8.3', 'Mast111','Mast139',  'Mast139_SC', 
-                     'Mast39',   'Mast85_r1','Mast85_r2', 
-                     'Mast85_r2_SC', 'MSK74711', 'RD', 'SJRHB000026_R2',  'SJRHB000026_R3',  'SJRHB000026_X1', 
-                     'SJRHB000026_X2', 'SJRHB010927_D1', 'SJRHB010927_X1', 
-                     'SJRHB010928_R1', 'SJRHB010928_X1',  'SJRHB011_D', 
-                     'SJRHB011_X', 'SJRHB012_R', 'SJRHB012_S', 'SJRHB012_Y', 
-                     'SJRHB012_Z', 'SJRHB012405_D1', 'SJRHB012405_X1',  'SJRHB013758_D1', 
-                     'SJRHB013758_D2', 'SJRHB013758_X1', 'SJRHB013758_X2',  'SJRHB030680_R1', 
-                     'SJRHB030680_X1', 'SJRHB049189_D1', 'SJRHB049189_X1')
 
 # Color subtype
 col_subtype <- c('#D3A2C2FF', '#95CECFFF')
@@ -152,14 +118,10 @@ names(col_cycling) <- c("Cycling", "Non-cycling")
 col_scores <- colorRamp2(c(-1, 0, 1.5), c("#4d9221", "#f7f7f7", "#c51b7d"))
 
 
-col_column_ha <- list(
-  #name = col_name,
-                      subtype = col_subtype,
-                      model = col_model,
+col_column_ha <- list(subtype = col_subtype,
                       Cluster_assignment = col_Cluster_assignment,
                       Cycling_prop = col_cycling,
-                      Muscle_lineage_score = col_scores
-                      )
+                      Muscle_lineage_score = col_scores)
 
 
 # define column annotation
@@ -173,7 +135,13 @@ bottom_ha = HeatmapAnnotation(scores = anno_barplot(ordered_scores), height = un
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('CD44', 'FN1', 'EGFR', 'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'HELLS', 'TTN', 'MYL4')
+elements_to_find <- c('FN1','PAX7', 'MEOX2', 'CD44', 
+                      'MYOD1', 'MYOG', 'MYH3', 
+                      'MKI67', 'CENPF', 
+                      'TTN', #'MYL4', 
+                      'SYP', 'L1CAM', 'CHGA' #, 'DCX', 'STMN4'
+)
+
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -185,7 +153,7 @@ col_fun = colorRamp2(c(-1, -0.1, 1), c("#2E5A87FF", "#CCCCD2FF", "#A90C38FF"))
 
 
 # plot heatmap 
-Cairo::CairoPDF(file.path(plot_dir, "1_heatmap_50.pdf"), width=15, height=6)
+Cairo::CairoPDF(file.path(plot_dir, "1_heatmap_50.pdf"), width=15, height=9)
 ht <- Heatmap(seurat_df,
               cluster_columns = FALSE,
               show_row_names = FALSE,
@@ -305,7 +273,6 @@ column_ha = HeatmapAnnotation(df = annotation_info,
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'SYP', 'L1CAM', 'CHGA')
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -429,7 +396,6 @@ column_ha = HeatmapAnnotation(df = annotation_info,
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('FN1', 'CAV1',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'SYP', 'L1CAM', 'CHGA')
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
@@ -568,7 +534,6 @@ column_ha = HeatmapAnnotation(df = annotation_info,
 row_ha = rowAnnotation(Group = genes_df$Group)
 
 # genes to mark
-elements_to_find <- c('FN1', 'CD44',  'MYOD1', 'MYOG', 'MYH3', 'MKI67', 'CENPF', 'TTN', 'MYL4', 'IFI6', 'SYT1', 'IFI44', 'ISG15')
 rows_genes_to_mark <- which(genes_df$Values %in% elements_to_find)
 rows_genes_to_mark_name <- genes_df$Values[rows_genes_to_mark]
 
