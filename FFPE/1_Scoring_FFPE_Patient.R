@@ -4,24 +4,20 @@ library(dplyr)
 library(Seurat)
 library(ggplot2)
 library(readxl)
-library(writexl)
-library(data.table)
-library(paletteer)
-library(SeuratObject)
-library(tidyverse)
 library(cowplot)
 library(ggpubr)
 
+# Set up environment ------------------------------------------------
 base_dir <- file.path('/Volumes/Sara_PhD/scRNAseq_data')
 data_dir <- file.path(base_dir, 'RMS/Patel_2022/FFPE_RNAseq')
 plot_dir <- file.path(base_dir, 'output/metadata/Pseudobulk')
 
 if (!dir.exists(plot_dir)){dir.create(plot_dir, recursive = T)}
 
+source(file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Manuscripts/2023 - Meta-data/GITHUB/RMS-metadata/Resources/Plot_style_v2.R'))
 
-##################################################################
-#  (0) Loading Patel FFPE RNAseq datasets:  #
-##################################################################
+
+# Load FFPE RNAseq datasets ------------------------------------------------
 
 ## ! Excel matrix contained some numbers that were not integers --> approximated
 
@@ -50,99 +46,206 @@ counts <- GetAssayData(FFPE_seurat, slot = "counts")
 counts_log <-log1p(counts)
 
 # Re-create Seurat object with log-transformed counts
-FFPE_seurat <- CreateSeuratObject(counts = counts_log)
-FFPE_seurat <- AddMetaData(FFPE_seurat, metadata = FFPE_meta2)
+FFPE_seurat2 <- CreateSeuratObject(counts = counts_log)
+FFPE_seurat[["RNA"]]$data <- FFPE_seurat2[["RNA"]]$counts
 
 # Reoder levels
 FFPE_seurat$treatment <- factor(x = FFPE_seurat$treatment, levels = c('diagnostic biopsy', 'delayed resection'))
 
-##################################################################
-#  (1) Score datasets with gene signatures:  #
-##################################################################
+
+# Score datasets with gene signatures  ------------------------------------------------
 
 # Load common signatures
-  markers <- list()
-  markers$Common_differentiated <- read_excel("/Volumes/Sara_PhD/scRNAseq_data/lists/Common_differentiated.xlsx", col_names=FALSE)
-  markers$Common_proliferative <- read_excel("/Volumes/Sara_PhD/scRNAseq_data/lists/Common_proliferative.xlsx", col_names=FALSE)
-  markers$Common_Stemcell <- read_excel("/Volumes/Sara_PhD/scRNAseq_data/lists/Common_Stemcell.xlsx", col_names=FALSE)
-  
+gene_list <- as.list(read_excel(file.path(base_dir, "list_final/RMS_atlas_gene_lists.xlsx"), col_names=TRUE))
+  # remove NAs
+  df_clean <- lapply(gene_list, na.omit)
+  df_list_clean <- as.list(df_clean)
+  remove_na_action <- function(x) {
+    attributes(x)$na.action <- NULL
+    x
+  }
+  gene_list <- lapply(df_list_clean, function(x) remove_na_action(na.omit(x)))
+
 
 # Add scores using "Addmodulescore" fct
-  FFPE_seurat <- AddModuleScore(object = FFPE_seurat, assay = 'RNA', features = markers$Common_differentiated, ctrl = 100, name = "Common_differentiated")
-  FFPE_seurat <- AddModuleScore(object = FFPE_seurat, assay = 'RNA', features = markers$Common_proliferative, ctrl = 100, name = "Common_proliferative")
-  FFPE_seurat <- AddModuleScore(object = FFPE_seurat, assay = 'RNA', features = markers$Common_Stemcell, ctrl = 100, name = "Common_Stemcell")
- 
-  FFPE_seurat$DS_score_Addmodule <- FFPE_seurat$Common_differentiated1 - FFPE_seurat$Common_Stemcell1
+  FFPE_seurat <- AddModuleScore(object = FFPE_seurat, assay = 'RNA', features = gene_list, name = names(gene_list))
   
-
-# Scale data
+  # rename metadata names of scores
+  col_start <- length(colnames(FFPE_seurat@meta.data)) - length(names(gene_list)) + 1
+  # identify number of last column with metadata scores
+  col_end <- length(colnames(FFPE_seurat@meta.data))
+  # rename columns with score name
+  colnames(FFPE_seurat@meta.data)[col_start:col_end] <- names(gene_list)
+  
+  FFPE_seurat$Muscle_lineage_score <- FFPE_seurat$Differentiated- FFPE_seurat$Progenitor
+  
+  
+  # Scale data
 ScaleData(FFPE_seurat)
 
+# save object
+saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
+
       
-### Vln plot Addmodulescore
-      compare_means(Common_proliferative1 ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
+# Violin plots ------------------------------------------------
+      compare_means(Proliferative ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
       p2 <- VlnPlot(FFPE_seurat,
-              features = 'Common_proliferative1',
+              features = 'Proliferative',
               group.by = 'treatment',
               pt.size=0,
-              cols = c('lightseagreen', 'gray96', 'gray96', 'maroon'),
+              cols = c( 'gray96', 'gray96', 'lightseagreen', 'maroon'),
       ) + 
         geom_point(aes(fill=FFPE_seurat@meta.data$subtype,group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
         geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(paired = TRUE, size=2) + NoLegend()
-      ggsave(file.path(plot_dir, "3_Vln_plot_prolifer_treatment.pdf"), width=2.5, height=4, dpi=300) 
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      ggsave(file.path(plot_dir, "1_Vln_plot_prolifer_treatment.pdf"), width=2.5, height=4, dpi=300) 
       
       
       
-      compare_means(Common_differentiated1 ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
+      compare_means(Differentiated ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
       p3 <- VlnPlot(FFPE_seurat,
-              features = 'Common_differentiated1',
+              features = 'Differentiated',
               group.by = 'treatment',
               pt.size=0,
-              cols = c('lightseagreen', 'gray96', 'gray96', 'maroon'),
+              cols = c( 'gray96', 'gray96', 'lightseagreen', 'maroon'),
       ) + 
         geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
         geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(paired = TRUE, size=2) + NoLegend()
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
       ggsave(file.path(plot_dir, "2_Vln_plot_differentiated_treatment.pdf"), width=2.5, height=4, dpi=300) 
       
       
       
       
-      compare_means(Common_Stemcell1 ~ treatment,  data = FFPE_seurat[[]])
+      compare_means(Progenitor ~ treatment,  data = FFPE_seurat[[]])
       p1 <- VlnPlot(FFPE_seurat,
-              features = 'Common_Stemcell1',
+              features = 'Progenitor',
               group.by = 'treatment',
               pt.size=0,
-              cols = c('lightseagreen', 'gray96', 'gray96', 'maroon'),
+              cols = c( 'gray96', 'gray96', 'lightseagreen', 'maroon'),
       ) + 
         geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
         geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(paired = TRUE, size=2) + NoLegend()
-      ggsave(file.path(plot_dir, "2_Vln_plot_progenitor_treatment.pdf"), width=2.5, height=4, dpi=300) 
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      ggsave(file.path(plot_dir, "3_Vln_plot_progenitor_treatment.pdf"), width=2.5, height=4, dpi=300) 
       
       
       
-      compare_means(DS_score_Addmodule ~ treatment,  data = FFPE_seurat[[]])
+      compare_means(Muscle_lineage_score ~ treatment,  data = FFPE_seurat[[]])
       VlnPlot(FFPE_seurat,
-              features = 'DS_score_Addmodule',
+              features = 'Muscle_lineage_score',
               group.by = 'treatment',
               pt.size=0,
-              cols = c('lightseagreen', 'gray96', 'gray96', 'maroon'),
-      ) + 
+              cols = c( 'gray96', 'gray96', 'lightseagreen', 'maroon'),
+      ) + theme_vln +
         geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
         geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(paired = TRUE, size=2) + NoLegend()
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()
       ggsave(file.path(plot_dir, "4_Vln_plot_muscle-score_treatment.pdf"), width=2.5, height=4, dpi=300) 
       
       plot_grid(p1, p2, p3, ncol = 3, align = "h", axis = "tb")
-      ggsave(file.path(plot_dir,"0_VlnPlot.pdf"), width=6, height=3.5, dpi=300)
+      ggsave(file.path(plot_dir,"5_VlnPlot_combined.pdf"), width=7, height=4)
       
  
       
-           5## Export data tables
-md <- FFPE_seurat@meta.data %>% as.data.table
-table_PDX <- md[, .N, by = c("name", "subtype", "Common_differentiated1", "Common_proliferative1", "Common_Stemcell1", "DS_score_Addmodule")] 
-write.csv(table_PDX, file.path(plot_dir, "Signatures.csv"))
+# Violin plots FN-RMS only ------------------------------------------------      
+      # subset
+      FFPE_seurat <- subset(FFPE_seurat, subset = subtype == 'ERMS')
+      # Scale data
+      ScaleData(FFPE_seurat)
       
- 
+      
+      # Violin plots ------------------------------------------------
+      compare_means(Proliferative ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
+      p2 <- VlnPlot(FFPE_seurat,
+                    features = 'Proliferative',
+                    group.by = 'treatment',
+                    pt.size=0,
+                    cols = c( 'gray96', 'gray96', 'maroon'),
+      ) + 
+        geom_point(aes(fill=FFPE_seurat@meta.data$subtype,group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      
+      
+      compare_means(Differentiated ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
+      p3 <- VlnPlot(FFPE_seurat,
+                    features = 'Differentiated',
+                    group.by = 'treatment',
+                    pt.size=0,
+                    cols = c( 'gray96', 'gray96', 'maroon'),
+      ) + 
+        geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      
+      
+      
+      compare_means(Progenitor ~ treatment,  data = FFPE_seurat[[]])
+      p1 <- VlnPlot(FFPE_seurat,
+                    features = 'Progenitor',
+                    group.by = 'treatment',
+                    pt.size=0,
+                    cols = c( 'gray96', 'gray96', 'maroon'),
+      ) + 
+        geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      
+      
+      compare_means(Muscle_lineage_score ~ treatment,  data = FFPE_seurat[[]])
+      VlnPlot(FFPE_seurat,
+              features = 'Muscle_lineage_score',
+              group.by = 'treatment',
+              pt.size=0,
+              cols = c( 'gray96', 'gray96', 'maroon'),
+      ) + theme_vln +
+        geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()
+      ggsave(file.path(plot_dir, "6_FNRMS__Vln_plot_muscle-score_treatment.pdf"), width=2.5, height=4, dpi=300) 
+      
+      plot_grid(p1, p2, p3, ncol = 3, align = "h", axis = "tb")
+      ggsave(file.path(plot_dir,"7_FNRMS_VlnPlot.pdf"), width=7, height=4.5)
+      
+      

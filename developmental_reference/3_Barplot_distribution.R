@@ -1,19 +1,11 @@
 rm(list = ls())
 
 library(dplyr)
-#library(Seurat)
 library(ggplot2)
 library(patchwork)
-#library(SeuratObject)
-#library(SingleCellExperiment)
 library(readxl)
 library(data.table)
-#library(paletteer)
-#library(RColorBrewer)
-#library(scater)
-#library(scRNAseq)
-#library(SingleR)
-#library(SCpubr)
+library(ggsankey)
 
 
 # Set up environment ------------------------------------------------
@@ -45,7 +37,8 @@ P3F1 <- readRDS(file.path(base_dir, "output/metadata/dev_muscle/metadata/P3F1 FP
 P7F1 <- readRDS(file.path(base_dir, "output/metadata/dev_muscle/metadata/P7F1 FP-RMS metadata.rds"))
 FNRMS <- readRDS(file.path(base_dir, "output/metadata/dev_muscle/metadata/FN-RMS metadata.rds"))
 
-metadata <- list(P3F1, P7F1, FNRMS)
+metadata <- list(FNRMS, P7F1, P3F1)
+
 
 # subset to columns of interest
 metadata_red <- list()
@@ -55,15 +48,7 @@ for (i in seq_along(metadata)){
 
 # concatenate
 metadata <- rbind(metadata_red[[1]], metadata_red[[2]], metadata_red[[3]])
-desired_order <- c('20082',  'aRMS-1',  'aRMS-2', 'aRMS-3',  #P3F1
-                   'aRMS-4',  'aRMS-5', 'KFR', 'Mast118', #P3F1
-                   'MSK82489', 'Rh4',  'Rh41',   'RMS', 
-                   'SJRHB013759_A1',  'SJRHB013759_A2', 
-                   'SJRHB013759_X14','SJRHB013759_X15', 
-                   'Mast95', 'MSK72117', 'MSK72117_SC', #P7F1
-                   'SJRHB010468_D1',  'SJRHB010468_X1', 'SJRHB013757_D2', 'SJRHB013757_X1', #P7F1
-                   'SJRHB031320_D1',   'SJRHB031320_X1', 'SJRHB046156_A1', 'SJRHB046156_X1', #P7F1
-                   '20696','21202', '29806', 
+desired_order <- c('20696','21202', '29806', 
                    'eRMS-1.1','eRMS-1.2',  'eRMS-2.1', 'eRMS-2.2', 
                    'eRMS-3.2','eRMS-4',  'eRMS-8.1', 'eRMS-8.2', 
                    'eRMS-8.3', 'Mast111','Mast139',  'Mast139_SC', 
@@ -74,7 +59,17 @@ desired_order <- c('20082',  'aRMS-1',  'aRMS-2', 'aRMS-3',  #P3F1
                    'SJRHB011_X', 'SJRHB012_R', 'SJRHB012_S', 'SJRHB012_Y', 
                    'SJRHB012_Z', 'SJRHB012405_D1', 'SJRHB012405_X1',  'SJRHB013758_D1', 
                    'SJRHB013758_D2', 'SJRHB013758_X1', 'SJRHB013758_X2',  'SJRHB030680_R1', 
-                   'SJRHB030680_X1', 'SJRHB049189_D1', 'SJRHB049189_X1')
+                   'SJRHB030680_X1', 'SJRHB049189_D1', 'SJRHB049189_X1',
+                   'Mast95', 'MSK72117', 'MSK72117_SC', #P7F1
+                   'SJRHB010468_D1',  'SJRHB010468_X1', 'SJRHB013757_D2', 'SJRHB013757_X1', #P7F1
+                   'SJRHB031320_D1',   'SJRHB031320_X1', 'SJRHB046156_A1', 'SJRHB046156_X1', #P7F1
+                   '20082',  'aRMS-1',  'aRMS-2', 'aRMS-3',  #P3F1
+                   'aRMS-4',  'aRMS-5', 'KFR', 'Mast118', #P3F1
+                   'MSK82489', 'Rh4',  'Rh41',   'RMS', 
+                   'SJRHB013759_A1',  'SJRHB013759_A2', 
+                   'SJRHB013759_X14','SJRHB013759_X15'
+)
+
 
 # Plot distribution of cell types  ------------------------------------------------
 
@@ -92,7 +87,7 @@ gg_barplot_style(metadata_freq, col_celltype) +
   geom_bar(mapping = aes(x = name, y = freq, fill = SingleR.cell.labels), stat = "identity", width = 0.9, color="black") +
   guides(fill = guide_legend(ncol = 1, title = 'Cell Type')) +
   labs(x = 'Sample', y = 'Percentage') 
-ggsave(file.path(output_dir, "4_Barplot_composition_RMS.pdf"), width=18, height=4, dpi=300)
+ggsave(file.path(output_dir, "1_Barplot_composition_RMS.pdf"), width=18, height=4, dpi=300)
 
 
 # Plot distribution of time points ------------------------------------------------
@@ -111,7 +106,71 @@ gg_barplot_style(metadata_freq, col_timepoints) +
   geom_bar(mapping = aes(x = name, y = freq, fill = SingleR.labels), stat = "identity", width = 0.9, color="black") +
   guides(fill = guide_legend(ncol = 1, title = 'Cell Type')) +
   labs(x = 'Sample', y = 'Percentage') 
-ggsave(file.path(output_dir, "4_Barplot_composition_RMS_timepoints.pdf"), width=18, height=4, dpi=300)
+ggsave(file.path(output_dir, "2_Barplot_composition_RMS_timepoints.pdf"), width=18, height=4, dpi=300)
 
 
+
+# Load .rds objects to plot alluvial plots ------------------------------------------------
+P7F1_sc <- readRDS(file.path(base_dir, "write/FPRMS_PAX7FOXO1_final_20240130.rds"))
+P3F1_sc <- readRDS(file.path(base_dir, "write/FPRMS_PAX3FOXO1_final_20240130.rds"))
+FNRMS_sc <- readRDS(file.path(base_dir, "write/FNRMS_final_20240130.rds"))
+
+# add SingleR label
+P7F1_sc <- AddMetaData(P7F1_sc, P7F1, col.name = 'SingleR.cell.labels')
+P3F1_sc <- AddMetaData(P3F1_sc, P3F1, col.name = 'SingleR.cell.labels')
+FNRMS_sc <- AddMetaData(FNRMS_sc, FNRMS, col.name = 'SingleR.cell.labels')
+
+# extract metadata for Sankey plots 
+P7F1_metadata <- P7F1_sc@meta.data[ , c('Cluster assignment', 'SingleR.cell.labels')]
+P3F1_metadata <- P3F1_sc@meta.data[ , c('Cluster assignment', 'SingleR.cell.labels')]
+FNRMS_metadata <- FNRMS_sc@meta.data[ , c('Cluster assignment', 'SingleR.cell.labels')]
+
+rm(P7F1_sc, P3F1_sc, FNRMS_sc)
+
+# create Sankey plots 
+
+metadata <- list(P7F1_metadata, P3F1_metadata, FNRMS_metadata)
+names(metadata) <- c('PAX7FOXO1', 'PAX3FOXO1', 'FNRMS')
+
+df <- list()
+
+for (i in seq_along(metadata)){
+  # transform data for plot
+  df[[i]] <- metadata[[i]] %>%
+    make_long(`Cluster assignment`, SingleR.cell.labels)
+
+  # Reorder factors
+  desired_order_node <- rev(c('Skeletal mesenchymal', 'Myogenic Progenitors', 'Myoblasts', 
+                              'Myoblast-Myocytes',  'Myocytes', 'Postnatal satellite cells',
+                              'Progenitor', 'Proliferative', 'Ground', 'Differentiated', 
+                              'Neuronal', 'Apoptosis', 'IFN'))
+  
+  df[[i]]$node <- factor(df[[i]]$node,levels = desired_order_node)
+  df[[i]]$next_node <- factor(df[[i]]$next_node,levels = desired_order_node)
+}
+  
+  # Chart 
+for (i in seq_along(metadata)){
+  ggplot(df[[i]], aes(x = x
+                        , next_x = next_x
+                        , node = node
+                        , next_node = next_node
+                        , fill = factor(node)
+                        , label = node)
+  ) +geom_sankey(flow.alpha = 0.3
+                 , node.color = "black"
+                 ,show.legend = FALSE) +
+    geom_sankey_label(size = 3.5, color = 1, fill = "white", 
+                      hjust = -0.1) +
+    theme_bw() + 
+    theme(legend.position = "none",
+          axis.title = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank(),
+          panel.grid = element_blank()) + 
+    scale_fill_manual(values = c(col_cluster_names_aggregate, col_celltype)) + 
+    labs(title = "FN-RMS")
+  ggsave(file.path(output_dir, paste0("3_SankeyPlot_", names(metadata)[i], ".pdf")), width=5, height=5)
+ 
+}
 

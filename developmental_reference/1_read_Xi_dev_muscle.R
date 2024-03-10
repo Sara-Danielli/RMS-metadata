@@ -32,6 +32,8 @@ col_timepoints <- c('#9E0142FF', '#D53E4FFF', '#F46D43FF', '#F46D43FF', '#FDAE61
 names(col_timepoints) <- c("Wk5.0", "Wk6.0" ,  "Wk6.5", "Wk7.0", "Wk7.25",  "Wk7.75" , "Wk9" ,   "Wk12",   "Wk14", "Wk17" ,  "Wk18", 
                            "Yr7",    "Yr11",   "Yr34" ,  "Yr42", NA)
 
+col_timepoints_aggregate <- c('#9E0142FF',    '#FDAE61FF',   '#FFFFBFFF',   '#ABDDA4FF', '#66C2A5FF', '#3288BDFF', '#5E4FA2FF')
+names(col_timepoints_aggregate) <- c('Wk5-6', 'Wk6-7', 'Wk7-8' ,'Wk9' ,'Wk12-14', 'Wk17-18', 'Postnatal')
 
 # Load data ------------------------------------------------
 
@@ -118,7 +120,7 @@ merged_Xietal <- AddMetaData(merged_Xietal, metadata = df)
 
 # Rename celltype names  -----------------------------------
 metadata <- merged_Xietal@meta.data
-# Use dplyr's mutate to substitute specific cells with new names
+# mutate cell type 
 metadata <- metadata %>%
   mutate(celltype = case_when(
     celltype == "MP" ~ "Myogenic progenitors",
@@ -131,6 +133,30 @@ metadata <- metadata %>%
 
 # Add new metadata to Seurat objetct
 merged_Xietal <- AddMetaData(merged_Xietal, metadata)
+
+# mutate timepoint
+annot.ids <- c("Wk5.0" = "Wk5-6",
+               "Wk6.0" = "Wk5-6",
+               "Wk6.5" = "Wk6-7",
+               "Wk7.0" = "Wk6-7",
+               "Wk7.75" = "Wk7-8",
+               "Wk7.25" = "Wk7-8",
+               "Wk9" = "Wk9",
+               "Wk12" = "Wk12-14",
+               "Wk14" = "Wk12-14",
+               "Wk18" = "Wk17-18",
+               "Wk17" = "Wk17-18",
+               "Yr7" = "Postnatal",
+               "Yr11" = "Postnatal",
+               "Yr34" = "Postnatal",
+               "Yr42" = "Postnatal")
+annot.ids <- as.data.frame(annot.ids)
+
+# Use match() to get the indices of matching Cluster_names in df2
+matching_indices <- match(merged_Xietal@meta.data$timepoint, rownames(annot.ids))
+
+merged_Xietal@meta.data$timepoint_aggregate <- annot.ids$annot.ids[matching_indices]
+
 
 # Downstream analysis Seurat object ------------------------------------------------
 
@@ -176,6 +202,9 @@ merged_Xietal$timepoint <- factor(x = merged_Xietal$timepoint,
                                   levels = c("Wk5.0", "Wk6.0" ,  "Wk6.5", "Wk7.0", "Wk7.25",  "Wk7.75" , "Wk9" ,   "Wk12",   "Wk14", "Wk17" ,  "Wk18", 
                                              "Yr7",    "Yr11",   "Yr34" ,  "Yr42"))
 
+merged_Xietal$timepoint_aggregate <- factor(x = merged_Xietal$timepoint_aggregate, 
+                                  levels = c("Wk5-6",  "Wk6-7", "Wk7-8", "Wk9", "Wk12-14",   "Wk17-18","Postnatal"   ))
+
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
                                  levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
                                             "Skeletal mesenchymal",  "Postnatal satellite cells")) 
@@ -202,15 +231,18 @@ saveRDS(merged_Xietal, file = "/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_
 merged_Xietal <- readRDS("/Volumes/Sara_PhD/scRNAseq_data/write/Dev_muscle_Xietal.rds")
 
 
-
 ## Plots ------------------------------------------------------------
 DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'timepoint', cols = col_timepoints) + NoAxes()
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_celltype_col1.pdf", 
-       width=12, height=5, dpi=300)
+       width=5, height=4, dpi=300)
+
+DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'timepoint_aggregate', cols = col_timepoints_aggregate) + NoAxes()
+ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_celltype_aggregate_col1.pdf", 
+       width=5, height=4, dpi=300)
 
 DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'celltype', cols=col_celltype) + NoAxes()
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_celltype_col2.pdf", 
-       width=12, height=5, dpi=300)
+       width=8, height=4, dpi=300)
 
 
 # UMAP plot of RMS scores
@@ -324,6 +356,10 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/4_cell_compos
 plot_bar(merged_Xietal, merged_Xietal$celltype, merged_Xietal$timepoint, col = col_timepoints) 
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/4_cell_composition_timepoints.pdf", 
        width=4, height=5)
+
+plot_bar(merged_Xietal, merged_Xietal$timepoint_aggregate, merged_Xietal$celltype, col = col_celltype) 
+ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/4_cell_composition_timepoint_aggregate.pdf", 
+       width=6, height=4)
 
 
 # Scoring cells for FN-RMS metaprograms   ------------------------------------------

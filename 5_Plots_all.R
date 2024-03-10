@@ -477,10 +477,21 @@ RMS.integrated <- readRDS(file.path(base_dir, "write/RMS_atlas_final_20240130.rd
 Vln_scores <- c("TBXT", "SOX2")
 names(Vln_scores) <- c("TBXT", "SOX2")
 
-for (a in 1:length(Vln_scores)) {
-  VlnPlot(RMS.integrated, features = Vln_scores[[a]], group.by = 'name',  split.by = 'subtype',  pt.size=0,  cols = col_subtype) 
-  ggsave(file.path(analysis_dir, paste0("18_Vln_plot_scores_",names(Vln_scores)[a],".pdf")), width=15, height=5, dpi=300)
-}
+VlnPlot(RMS.integrated, 
+       features = 'Muscle lineage score', 
+       group.by = 'name',  
+       split.by = 'subtype',  
+       pt.size=0,  
+       cols = col_subtype) + NoLegend() +
+  labs (y='Module score, AU', x='', title = 'Muscle lineage score') + 
+  scale_fill_manual(values = col_subtype) + 
+  geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+  theme_vln
+ggsave(file.path(analysis_dir, paste0("18_Vln_plot_scores_muscle_lineage_score.pdf")), width=15, height=6)
+
+
+VlnPlot(RMS.integrated, features = Vln_scores[[a]], group.by = 'name',  split.by = 'subtype',  pt.size=0,  cols = col_subtype) 
+ggsave(file.path(analysis_dir, paste0("18_Vln_plot_scores_",names(Vln_scores)[a],".pdf")), width=15, height=5, dpi=300)
 
 
 # Dotplot scores
