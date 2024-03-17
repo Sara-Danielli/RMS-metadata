@@ -18,8 +18,14 @@ source(file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Ma
 
 # color palette
 #colors populations
-col_celltype <- c('#C70E7BFF', '#FC6882FF',  '#6C6C9DFF',  '#A6E000FF','#1BB6AFFF','#172869FF')
-names(col_celltype) <- c('Myogenic Progenitors', 'Myoblast-Myocytes', 'Skeletal mesenchymal', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells')
+#col_celltype_pal2 <- c('#C3A016FF', '#C3D878FF', '#58A787FF', '#8EBACDFF', '#246893FF', '#163274FF', '#0C1F4BFF')
+#col_celltype_pal0 <- c('#C70E7BFF', '#FC6882FF',  '#A6E000FF','#1BB6AFFF', '#6C6C9DFF', '#172869FF')
+#col_celltype_pal0b <- c('#C70E7BFF', '#FC6882FF', '#1BB6AFFF', '#6C6C9DFF', '#172869FF', 'black')
+#col_celltype_pal1 <- c('#62205FFF', '#D0A8C8FF', '#DCEAEAFF', '#7CC3C9FF', '#172869FF', '#FBF5A3FF')
+col_celltype <- c('#62205FFF', '#D0A8C8FF', '#DCEAEAFF', '#7CC3C9FF', '#172869FF', '#C3D878FF')
+#col_celltype_pal3 <- c('#CF5483FF', '#FE8BB2FF', '#B6CAC1FF', '#98E2E3FF' ,'#57ADBAFF', '#5F4E3CFF')
+#col_celltype_pal4 <- paletteer::paletteer_d("MoMAColors::Rattner")[1:6]
+names(col_celltype) <- c('Skeletal mesenchymal', 'Myogenic Progenitors', 'Myoblast-Myocytes', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells')
 
 #colors time points
 # col_timepoints <- c('#9E0142FF', '#D53E4FFF', '#F46D43FF', '#F46D43FF', '#FDAE61FF',  '#FEE08BFF',
@@ -30,7 +36,6 @@ names(col_celltype) <- c('Myogenic Progenitors', 'Myoblast-Myocytes', 'Skeletal 
 
 col_timepoints <- c('#9E0142FF',    '#FDAE61FF',   '#FFFFBFFF',   '#ABDDA4FF', '#66C2A5FF', '#3288BDFF', '#5E4FA2FF')
 names(col_timepoints) <- c('Wk5-6', 'Wk6-7', 'Wk7-8' ,'Wk9' ,'Wk12-14', 'Wk17-18', 'Postnatal')
-
 
 # Load metadata ------------------------------------------------
 P3F1 <- readRDS(file.path(base_dir, "output/metadata/dev_muscle/metadata/P3F1 FP-RMS metadata.rds"))
@@ -82,12 +87,15 @@ metadata_freq
 
 # Plot
 metadata_freq$name <- factor(metadata_freq$name, levels = desired_order)
+metadata_freq$SingleR.cell.labels <- factor(metadata_freq$SingleR.cell.labels,
+                                            levels = c('Skeletal mesenchymal', 'Myogenic Progenitors', 'Myoblast-Myocytes', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells'))
+
 
 gg_barplot_style(metadata_freq, col_celltype) +
   geom_bar(mapping = aes(x = name, y = freq, fill = SingleR.cell.labels), stat = "identity", width = 0.9, color="black") +
   guides(fill = guide_legend(ncol = 1, title = 'Cell Type')) +
   labs(x = 'Sample', y = 'Percentage') 
-ggsave(file.path(output_dir, "1_Barplot_composition_RMS.pdf"), width=18, height=4, dpi=300)
+ggsave(file.path(output_dir, "1_Barplot_composition_RMS_pal0b.pdf"), width=18, height=4, dpi=300)
 
 
 # Plot distribution of time points ------------------------------------------------
@@ -125,10 +133,8 @@ P7F1_metadata <- P7F1_sc@meta.data[ , c('Cluster assignment', 'SingleR.cell.labe
 P3F1_metadata <- P3F1_sc@meta.data[ , c('Cluster assignment', 'SingleR.cell.labels')]
 FNRMS_metadata <- FNRMS_sc@meta.data[ , c('Cluster assignment', 'SingleR.cell.labels')]
 
-rm(P7F1_sc, P3F1_sc, FNRMS_sc)
 
-# create Sankey plots 
-
+# create Sankey plots ----------------------------------------------------------
 metadata <- list(P7F1_metadata, P3F1_metadata, FNRMS_metadata)
 names(metadata) <- c('PAX7FOXO1', 'PAX3FOXO1', 'FNRMS')
 
@@ -173,4 +179,15 @@ for (i in seq_along(metadata)){
   ggsave(file.path(output_dir, paste0("3_SankeyPlot_", names(metadata)[i], ".pdf")), width=5, height=5)
  
 }
+
+
+# Plot UMAP plots with SingleR labels -----------------------------------------
+p1 <- DimPlot(FNRMS_sc, reduction = "umap_rpca", group.by = 'SingleR.cell.labels', cols = col_celltype, 
+              label=F, pt.size = 3, raster=TRUE, raster.dpi = c(1012, 1012)) + NoLegend() + ggtitle('FN-RMS')
+p2 <- DimPlot(P7F1_sc, reduction = "umap_rpca", group.by = 'SingleR.cell.labels', cols = col_celltype, 
+              label=F, pt.size = 3, raster=TRUE, raster.dpi = c(1012, 1012)) + NoLegend() + ggtitle('FP-RMS (PAX7::FOXO1)')
+p3 <- DimPlot(P3F1_sc, reduction = "umap_rpca", group.by = 'SingleR.cell.labels', cols = col_celltype, 
+              label=F, pt.size = 3, raster=TRUE, raster.dpi = c(1012, 1012)) + ggtitle('FP-RMS (PAX3::FOXO1')
+p1| p2 | p3
+ggsave(file.path(output_dir, "4_UMAP_cell_projections.pdf"), width=12.5, height=4, dpi=300)
 

@@ -310,7 +310,7 @@ Vln_scores <- c("TBXT", "SOX2")
 names(Vln_scores) <- c("TBXT", "SOX2")
 
 for (a in 1:length(Vln_scores)) {
-  VlnPlot(P3F1, features = Vln_scores[[a]], group.by = 'Cluster assignment', pt.size=0,  cols = col_cluster_names_aggregate) 
+  VlnPlot(P3F1, features = Vln_scores[[a]], assay = 'RNA', group.by = 'Cluster assignment', pt.size=0,  cols = col_cluster_names_aggregate) 
   ggsave(file.path(analysis_dir, paste0("20_Vln_plot_scores_",names(Vln_scores)[a],".pdf")), width=5, height=5, dpi=300)
 }
 

@@ -22,8 +22,8 @@ source(file.path('/Users/sdaniell/Dropbox (Partners HealthCare)/Sara Danielli/Ma
 
 # color palette
 #colors populations
-col_celltype <- c('#C70E7BFF', '#FC6882FF',  '#6C6C9DFF',  '#A6E000FF','#1BB6AFFF','#172869FF')
-names(col_celltype) <- c('Myogenic progenitors', 'Myoblasts-myocyte', 'Skeletal mesenchymal', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells')
+col_celltype <- c('#62205FFF', '#D0A8C8FF', '#DCEAEAFF', '#7CC3C9FF', '#172869FF', '#C3D878FF')
+names(col_celltype) <- c('Skeletal mesenchymal', 'Myogenic progenitors', 'Myoblasts-myocyte', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells')
 
 #colors time points
 col_timepoints <- c('#9E0142FF', '#D53E4FFF', '#F46D43FF', '#F46D43FF', '#FDAE61FF',  '#FEE08BFF',
@@ -206,8 +206,8 @@ merged_Xietal$timepoint_aggregate <- factor(x = merged_Xietal$timepoint_aggregat
                                   levels = c("Wk5-6",  "Wk6-7", "Wk7-8", "Wk9", "Wk12-14",   "Wk17-18","Postnatal"   ))
 
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
-                                 levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
-                                            "Skeletal mesenchymal",  "Postnatal satellite cells")) 
+                                 levels = c("Skeletal mesenchymal", "Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
+                                             "Postnatal satellite cells")) 
 
 # Plot PCA
 DimPlot(merged_Xietal, reduction = "pca_no_regression", group.by = 'celltype', cols = col_celltype) + NoAxes()
@@ -242,7 +242,7 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_cellty
 
 DimPlot(merged_Xietal, reduction = "UMAP_no_regression", group.by = 'celltype', cols=col_celltype) + NoAxes()
 ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/3_UMAP_celltype_col2.pdf", 
-       width=8, height=4, dpi=300)
+       width=6, height=4, dpi=300)
 
 
 # UMAP plot of RMS scores
@@ -256,8 +256,8 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/4_UMAP_scores
 
 # Dotplot of RMS scores
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
-                                 levels = c("Postnatal satellite cells",  "Skeletal mesenchymal", "Myocytes", "Myoblasts",
-                                            "Myoblasts-myocyte", "Myogenic progenitors"))
+                                 levels = c("Postnatal satellite cells", "Myocytes", "Myoblasts",
+                                            "Myoblasts-myocyte", "Myogenic progenitors", "Skeletal mesenchymal"))
 
 DotPlot(merged_Xietal, features = rev(names(signatures)),
         group.by = 'celltype',
@@ -304,8 +304,8 @@ ggsave("/Volumes/Sara_PhD/scRNAseq_data/output/metadata/dev_muscle/5_DotPlot_sco
 
 # define celltype markers and select top 25 marker genes
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
-                                 levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
-                                            "Skeletal mesenchymal",  "Postnatal satellite cells")) 
+                                 levels = c( "Skeletal mesenchymal", "Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
+                                            "Postnatal satellite cells")) 
 Idents(merged_Xietal) = 'celltype'
 muscle.markers <- FindAllMarkers(merged_Xietal, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.3, test.use = 'negbinom')
 
@@ -345,8 +345,8 @@ merged_Xietal$timepoint <- factor(x = merged_Xietal$timepoint,
                                              "Yr7",    "Yr11",   "Yr34" ,  "Yr42"))
 
 merged_Xietal$celltype <- factor(x = merged_Xietal$celltype, 
-                                 levels = c("Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
-                                            "Skeletal mesenchymal",  "Postnatal satellite cells")) 
+                                 levels = c("Skeletal mesenchymal",  "Myogenic progenitors", "Myoblasts-myocyte", "Myoblasts",  "Myocytes",
+                                            "Postnatal satellite cells")) 
 
 
 plot_bar(merged_Xietal, merged_Xietal$timepoint, merged_Xietal$celltype, col = col_celltype) 
