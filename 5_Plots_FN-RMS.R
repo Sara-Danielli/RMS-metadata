@@ -31,25 +31,6 @@ if (!dir.exists(analysis_dir)){dir.create(analysis_dir, recursive = T)}
 ERMS.integrated <- readRDS(file.path(base_dir, "write/Danielli_Patel_Langenau_RPCA_ERMS_20230713.rds"))
 DefaultAssay(ERMS.integrated) <- "integrated"
 
-## Define colors 
-# Color model
-col_model <- c("#009B9EFF","#A7D3D4FF",  "#E4C1D9FF","#C75DABFF")
-
-# Color origin
-col_origin <- paletteer::paletteer_d("ggthemes::excel_Slice", n=4)
-
-# Color name
-col_aRMS <- paletteer::paletteer_c("ggthemes::Blue-Teal", n = 27)
-col_eRMS <- paletteer::paletteer_c("ggthemes::Purple", n = 47)
-col_name <- c(col_aRMS, col_eRMS)
-
-# Color subtype
-col_subtype <- c('#D3A2C2FF', '#95CECFFF')
-
-# Color Louvain clusters
-col_cluster_names =  paletteer::paletteer_d("rcartocolor::Pastel", n = 8)
-col_cluster_names_aggregate <- c("#7FBC41FF", '#FFAD72FF', '#FFE5CCFF', "#8E0152FF",'#B497E7FF' )
-
 ## Order factors
 ERMS.integrated$origin <- factor(x = ERMS.integrated$origin, levels = c("Wei et al.", "Patel et al.", "Danielli et al.", "Weng et al."))
 ERMS.integrated$model <- factor(x = ERMS.integrated$model, levels = c("Patient", "O-PDX", "Primary culture", "Cell line"))
@@ -438,3 +419,207 @@ DotPlot(FNRMS,
   ) 
 ggsave(file.path(analysis_dir, paste0("24_DotPlot__gene_signature.pdf")), width=4.5, height=4.0)
 
+
+# VlnPlot primary vs recurrent samples -------------------------------------
+Idents(FNRMS) <- 'model'
+FNRMS_subset <- subset(FNRMS, idents = "Patient")
+Idents(FNRMS_subset) <- 'treatment'
+FNRMS_subset <- subset(FNRMS_subset, idents = "NA", invert = T)
+
+# Plot data 
+scores <- c('Progenitor score',  'Proliferative score', 'Differentiated score', "Muscle lineage score")
+titles <- c('Progenitor score',  'Proliferative score', 'Differentiated score', "Muscle lineage score")
+
+plot <- list()
+## Violin plots 
+for (a in 1:length(scores)) {
+  plot[[a]] <- VlnPlot(FNRMS_subset,
+          features = scores[[a]], 
+          group.by = 'treatment',  
+          #sort = 'decreasing',
+          pt.size=0,  
+          cols = col_subtype) + 
+    labs (y='Module score, AU', x='', title = scores[a]) + 
+    scale_fill_manual(values = c('grey80', 'grey20'))  + 
+    scale_fill_manual(values = c('grey80', 'grey20')) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln +
+    stat_compare_means(aes(label = after_stat(p.format)), 
+                       method = 't.test', 
+                       #ref.group = 'FN-RMS',
+                       size = 6, 
+                       label.y.npc = 0.91, 
+                       label.x.npc = 0.4) + 
+    NoLegend() 
+  #ggsave(file.path(analysis_dir, paste0("25_Vln_plot_scores_subtype_",scores[a],".pdf")), width=3, height=3.5, dpi=300)
+}
+
+ggarrange(plot[[1]], plot[[2]], plot[[3]], plot[[4]], ncol=4)
+ggsave(file.path(analysis_dir, paste0("25_Vln_plot_FN_RMS_treatment_paper.pdf")), width=12, height=3.5, dpi=300)
+
+
+
+# VlnPlot SJRHB000026_R2 and _R3  -------------------------------------
+Idents(FNRMS) <- 'name'
+SJRHB000026 <- subset(FNRMS, idents = c("SJRHB000026_R2", "SJRHB000026_R3"))
+
+## Violin plots 
+for (a in 1:length(scores)) {
+  plot[[a]] <- VlnPlot(SJRHB000026,
+                       features = scores[[a]], 
+                       group.by = 'name',  
+                       #sort = 'decreasing',
+                       pt.size=0,  
+                       cols = col_subtype) + 
+    labs (y='Module score, AU', x='', title = scores[a]) + 
+    scale_fill_manual(values = c('grey80', 'grey20'))  + 
+    scale_fill_manual(values = c('grey80', 'grey20')) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln +
+    stat_compare_means(aes(label = after_stat(p.format)), 
+                       method = 't.test', 
+                       #ref.group = 'FN-RMS',
+                       size = 6, 
+                       label.y.npc = 0.91, 
+                       label.x.npc = 0.4) + 
+    NoLegend() 
+}
+
+ggarrange(plot[[1]], plot[[2]], plot[[3]], plot[[4]], ncol=4)
+ggsave(file.path(analysis_dir, paste0("26_Vln_plot_SJRHB000026.pdf")), width=12, height=5.5, dpi=300)
+
+
+
+# VlnPlot eRMS8  -------------------------------------
+Idents(FNRMS) <- 'name'
+eRMS8 <- subset(FNRMS, idents = c("eRMS-8.1", "eRMS-8.2", "eRMS-8.3"))
+plot <- list()
+## Violin plots 
+for (a in 1:length(scores)) {
+  plot[[a]] <- VlnPlot(eRMS8,
+                       features = scores[[a]], 
+                       group.by = 'name',  
+                       #sort = 'decreasing',
+                       pt.size=0,  
+                       cols = col_subtype) + 
+    labs (y='Module score, AU', x='', title = scores[a]) + 
+    scale_fill_manual(values = c('grey80', 'grey20', 'grey20'))  + 
+    scale_fill_manual(values = c('grey80', 'grey20', 'grey20')) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln +
+    stat_compare_means(aes(label = after_stat(p.format)), 
+                       #comparisons = list(c("eRMS-8.1", "eRMS-8,.2"), c("eRMS-8.1", "eRMS-8.3")), 
+                       method = "t.test", ref.group = "eRMS-8.1",
+                       size = 5, 
+                       label.y.npc = 0.91, 
+                       label.x.npc = c(0.2, 0.6)) + 
+    NoLegend() 
+}
+
+ggarrange(plot[[1]], plot[[2]], plot[[3]], plot[[4]], ncol=4)
+ggsave(file.path(analysis_dir, paste0("26_Vln_plot_eRMS8.pdf")), width=15, height=5.5, dpi=300)
+
+
+# VlnPlot SJRHB000026_X1 and _X2   -------------------------------------
+Idents(FNRMS) <- 'name'
+SJRHB000026_X1 <- subset(FNRMS, idents = c("SJRHB000026_X1", "SJRHB000026_X2"))
+
+## Violin plots 
+plot <- list()
+for (a in 1:length(scores)) {
+  plot[[a]] <- VlnPlot(SJRHB000026_X1,
+                       features = scores[[a]], 
+                       group.by = 'name',  
+                       #sort = 'decreasing',
+                       pt.size=0,  
+                       cols = col_subtype) + 
+    labs (y='Module score, AU', x='', title = scores[a]) + 
+    scale_fill_manual(values = c('grey80', 'grey20'))  + 
+    scale_fill_manual(values = c('grey80', 'grey20')) + 
+    geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+    theme_vln +
+    stat_compare_means(aes(label = after_stat(p.format)), 
+                       method = 't.test', 
+                       #ref.group = 'FN-RMS',
+                       size = 6, 
+                       label.y.npc = 0.91, 
+                       label.x.npc = 0.4) + 
+    NoLegend() 
+}
+
+ggarrange(plot[[1]], plot[[2]], plot[[3]], plot[[4]], ncol=4)
+ggsave(file.path(analysis_dir, paste0("26_Vln_plot_SJRHB000026_X1.pdf")), width=12, height=5.5, dpi=300)
+
+
+# ### Scores split by primary/recurrence
+# FNRMS_meta <- FNRMS_subset@meta.data %>% 
+#   group_by(name, PatientID, treatment) %>% 
+#   dplyr::summarise(`Progenitor score average` = mean(`Progenitor score`),
+#                    `Proliferative score average` = mean(`Proliferative score`),
+#                    `Differentiated score average` = mean(`Differentiated score`),
+#                    `Muscle lineage score` = mean(`Muscle lineage score`)) 
+# 
+# 
+# ### Violin plot cluster frequency in matched samples
+# p1 <- ggplot(FNRMS_meta, aes(x=treatment, y=`Progenitor score average`)) +
+#   geom_violin(aes(fill = `Progenitor score average`)) + 
+#   geom_boxplot(aes(fill = `Progenitor score average`), width = 0.07) +
+#   geom_point(fill = 'maroon' ,size=2,shape=21, position = position_dodge(0.2)) +
+#   theme_vln_plot +
+#   labs (y='Module score, AU', x='') + 
+#   #scale_fill_manual(values=color_cell_type_all_malignant) + 
+#   #facet_wrap(. ~ Cell_type_malignant, nrow = 1, scales = "free") +
+#   stat_compare_means(aes(label = after_stat(p.format)), 
+#                      method = 't.test', 
+#                      #ref.group = 'FN-RMS',
+#                      size = 4, 
+#                      label.y.npc = 0.91, 
+#                      label.x.npc = 0.4)  + NoLegend() + ggtitle('Progenitor score')
+# 
+# p2 <- ggplot(FNRMS_meta, aes(x=treatment, y=`Proliferative score average`)) +
+#   geom_violin(aes(fill = `Proliferative score average`)) + 
+#   geom_boxplot(aes(fill = `Proliferative score average`), width = 0.07) +
+#   geom_point(fill = 'maroon' ,size=2,shape=21, position = position_dodge(0.2)) +
+#   theme_vln_plot +
+#   labs (y='Module score, AU', x='') + 
+#   #scale_fill_manual(values=color_cell_type_all_malignant) + 
+#   #facet_wrap(. ~ Cell_type_malignant, nrow = 1, scales = "free") +
+#   stat_compare_means(aes(label = after_stat(p.format)), 
+#                      method = 't.test', 
+#                      #ref.group = 'FN-RMS',
+#                      size = 4, 
+#                      label.y.npc = 0.91, 
+#                      label.x.npc = 0.4)  + NoLegend()+ ggtitle('Proliferative score')
+# 
+# p3 <- ggplot(FNRMS_meta, aes(x=treatment, y=`Differentiated score average`)) +
+#   geom_violin(aes(fill = `Differentiated score average`)) + 
+#   geom_boxplot(aes(fill = `Differentiated score average`), width = 0.07) +
+#   geom_point(fill = 'maroon' ,size=2,shape=21, position = position_dodge(0.2)) +
+#   theme_vln_plot +
+#   labs (y='Module score, AU', x='') + 
+#   #scale_fill_manual(values=color_cell_type_all_malignant) + 
+#   #facet_wrap(. ~ Cell_type_malignant, nrow = 1, scales = "free") +
+#   stat_compare_means(aes(label = after_stat(p.format)), 
+#                      method = 't.test', 
+#                      #ref.group = 'FN-RMS',
+#                      size = 4, 
+#                      label.y.npc = 0.91, 
+#                      label.x.npc = 0.4)  + NoLegend()+ ggtitle('Differentiated score')
+# 
+# p4 <- ggplot(FNRMS_meta, aes(x=treatment, y=`Muscle lineage score`)) +
+#   geom_violin(aes(fill = `Muscle lineage score`)) + 
+#   geom_boxplot(width = 0.07) +
+#   geom_point(fill = 'maroon' ,size=2,shape=21, position = position_dodge(0.2)) +
+#   theme_vln_plot +
+#   labs (y='Module score, AU', x='') + 
+#   #scale_fill_manual(values=color_cell_type_all_malignant) + 
+#   #facet_wrap(. ~ Cell_type_malignant, nrow = 1, scales = "free") +
+#   stat_compare_means(aes(label = after_stat(p.format)), 
+#                      method = 't.test', 
+#                      #ref.group = 'FN-RMS',
+#                      size = 4, 
+#                      label.y.npc = 0.91, 
+#                      label.x.npc = 0.4)  + NoLegend()+ ggtitle('Muscle lineage score')
+# 
+# ggarrange(p1, p2, p3, p4, ncol=4)
+# ggsave(file.path(analysis_dir, paste0("26_Vln_plot_FN_RMS_treatment_paper.pdf")), width=9, height=3.5, dpi=300)

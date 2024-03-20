@@ -191,3 +191,64 @@ p3 <- DimPlot(P3F1_sc, reduction = "umap_rpca", group.by = 'SingleR.cell.labels'
 p1| p2 | p3
 ggsave(file.path(output_dir, "4_UMAP_cell_projections.pdf"), width=12.5, height=4, dpi=300)
 
+
+### SkM. mesen population split by primary/recurrence
+Idents(FNRMS_sc) <- 'model'
+FNRMS_sc_subset <- subset(FNRMS_sc, idents = "Patient")
+Idents(FNRMS_sc_subset) <- 'treatment'
+FNRMS_sc_subset <- subset(FNRMS_sc_subset, idents = "NA", invert = T)
+
+FNRMS_sc_subset$SingleR.cell.labels <- factor(FNRMS_sc_subset$SingleR.cell.labels,
+                                            levels = c('Skeletal mesenchymal', 'Myogenic Progenitors', 'Myoblast-Myocytes', 'Myoblasts', 'Myocytes', 'Postnatal satellite cells'))
+
+### SkM. mesen population split by primary/recurrence
+FNRMS_sc_meta <- FNRMS_sc_subset@meta.data %>% 
+  group_by(name, PatientID, treatment, SingleR.cell.labels) %>% 
+  dplyr::summarise(n = n()) %>% 
+  dplyr::mutate(freq = n / sum(n)) 
+
+ggplot(FNRMS_sc_meta, aes(x=treatment, y=freq)) +
+  geom_violin(aes(fill = SingleR.cell.labels)) + 
+  geom_boxplot(width = 0.07) +
+  geom_point(fill = 'black', aes(group = PatientID),size=2,shape=21, position = position_dodge(0.2)) +
+  geom_line(aes(group = PatientID), position = position_dodge(0.2), linetype = "dashed") +
+  theme_vln_plot +
+  labs (y='Proportion', x='') + 
+  scale_fill_manual(values=col_celltype) + 
+  facet_wrap(. ~ SingleR.cell.labels, nrow = 1, scales = "free") +
+  stat_compare_means(aes(label = after_stat(p.format)), 
+                     method = 't.test', 
+                     #ref.group = 'FN-RMS',
+                     size = 4, 
+                     label.y.npc = 0.91, 
+                     label.x.npc = 0.4)  + NoLegend() +
+  scale_y_continuous(labels = scales::percent) 
+ggsave(file.path(output_dir, "6_VlnPlot_FNRMS.pdf"), width=15, height=3.5, dpi=300)
+
+
+
+### Tumor population split by primary/recurrence
+FNRMS_sc_meta <- FNRMS_sc_subset@meta.data %>% 
+  group_by(name, PatientID, treatment, `Cluster assignment`) %>% 
+  dplyr::summarise(n = n()) %>% 
+  dplyr::mutate(freq = n / sum(n)) 
+
+ggplot(FNRMS_sc_meta, aes(x=treatment, y=freq)) +
+  geom_violin(aes(fill = `Cluster assignment`)) + 
+  geom_boxplot(width = 0.07) +
+  geom_point(fill = 'black', aes(group = PatientID),size=2,shape=21, position = position_dodge(0.2)) +
+  geom_line(aes(group = PatientID), position = position_dodge(0.2), linetype = "dashed") +
+  theme_vln_plot +
+  labs (y='Proportion', x='') + 
+  scale_fill_manual(values=col_cluster_names_aggregate) + 
+  facet_wrap(. ~ `Cluster assignment`, nrow = 1, scales = "free") +
+  stat_compare_means(aes(label = after_stat(p.format)), 
+                     method = 't.test', 
+                     #ref.group = 'FN-RMS',
+                     size = 4, 
+                     label.y.npc = 0.91, 
+                     label.x.npc = 0.4)  + NoLegend() +
+  scale_y_continuous(labels = scales::percent) 
+ggsave(file.path(output_dir, "6_VlnPlot_FNRMS_tumor_pop.pdf"), width=10, height=3.5, dpi=300)
+
+

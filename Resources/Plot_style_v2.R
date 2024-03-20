@@ -146,3 +146,22 @@ gg_barplot_style <- function(df, colors) {
     scale_y_continuous(expand = c(0,0), labels = scales::percent) +
     scale_fill_manual(values = colors) 
 }
+
+
+theme_vln_plot <- theme(panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.background = element_blank(),
+      panel.background = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.text.x = element_text(size=12, angle = 90, vjust = 0.5, hjust=1, colour="black"),
+      axis.text.y = element_text(size=12, colour="black"),
+      axis.title=element_text(size=12),
+      #legend text 
+      legend.text=element_text(size=12),
+      #style facet text
+      strip.text.x = element_text(size=12, face="bold", vjust = 0),
+      strip.text.y = element_text(size=12, face="bold", vjust = 0),
+      strip.background = element_rect(fill=NA, size=1.5),
+      # space facet
+      panel.spacing = unit(1, "lines"))

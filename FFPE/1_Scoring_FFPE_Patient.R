@@ -6,6 +6,7 @@ library(ggplot2)
 library(readxl)
 library(cowplot)
 library(ggpubr)
+library(tidyverse)
 
 # Set up environment ------------------------------------------------
 base_dir <- file.path('/Volumes/Sara_PhD/scRNAseq_data')
@@ -170,22 +171,22 @@ saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
       
 # Violin plots FN-RMS only ------------------------------------------------      
       # subset
-      FFPE_seurat <- subset(FFPE_seurat, subset = subtype == 'ERMS')
+      FFPE_seurat_ERMS <- subset(FFPE_seurat, subset = subtype == 'ERMS')
       # Scale data
-      ScaleData(FFPE_seurat)
+      ScaleData(FFPE_seurat_ERMS)
       
       
       # Violin plots ------------------------------------------------
-      compare_means(Proliferative ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
-      p2 <- VlnPlot(FFPE_seurat,
+      compare_means(Proliferative ~ treatment,  data = FFPE_seurat_ERMS[[]], paired = TRUE)
+      p2 <- VlnPlot(FFPE_seurat_ERMS,
                     features = 'Proliferative',
                     group.by = 'treatment',
                     pt.size=0,
                     cols = c( 'gray96', 'gray96', 'maroon'),
       ) + 
-        geom_point(aes(fill=FFPE_seurat@meta.data$subtype,group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
-        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(aes(label = after_stat(p.signif)), 
+        geom_point(aes(fill=FFPE_seurat_ERMS@meta.data$subtype,group=FFPE_seurat_ERMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ERMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.format)), 
                            method = 't.test', 
                            size = 5, 
                            label.y.npc = 0.95, 
@@ -193,16 +194,16 @@ saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
         ) + NoLegend()      
       
       
-      compare_means(Differentiated ~ treatment,  data = FFPE_seurat[[]], paired = TRUE)
-      p3 <- VlnPlot(FFPE_seurat,
+      compare_means(Differentiated ~ treatment,  data = FFPE_seurat_ERMS[[]], paired = TRUE)
+      p3 <- VlnPlot(FFPE_seurat_ERMS,
                     features = 'Differentiated',
                     group.by = 'treatment',
                     pt.size=0,
                     cols = c( 'gray96', 'gray96', 'maroon'),
       ) + 
-        geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
-        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(aes(label = after_stat(p.signif)), 
+        geom_point(aes(fill=FFPE_seurat_ERMS@meta.data$subtype, group=FFPE_seurat_ERMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ERMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.format)), 
                            method = 't.test', 
                            size = 5, 
                            label.y.npc = 0.95, 
@@ -211,16 +212,16 @@ saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
       
       
       
-      compare_means(Progenitor ~ treatment,  data = FFPE_seurat[[]])
-      p1 <- VlnPlot(FFPE_seurat,
+      compare_means(Progenitor ~ treatment,  data = FFPE_seurat_ERMS[[]])
+      p1 <- VlnPlot(FFPE_seurat_ERMS,
                     features = 'Progenitor',
                     group.by = 'treatment',
                     pt.size=0,
                     cols = c( 'gray96', 'gray96', 'maroon'),
       ) + 
-        geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
-        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(aes(label = after_stat(p.signif)), 
+        geom_point(aes(fill=FFPE_seurat_ERMS@meta.data$subtype, group=FFPE_seurat_ERMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ERMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.format)), 
                            method = 't.test', 
                            size = 5, 
                            label.y.npc = 0.95, 
@@ -228,16 +229,16 @@ saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
         ) + NoLegend()      
       
       
-      compare_means(Muscle_lineage_score ~ treatment,  data = FFPE_seurat[[]])
-      VlnPlot(FFPE_seurat,
+      compare_means(Muscle_lineage_score ~ treatment,  data = FFPE_seurat_ERMS[[]])
+      VlnPlot(FFPE_seurat_ERMS,
               features = 'Muscle_lineage_score',
               group.by = 'treatment',
               pt.size=0,
               cols = c( 'gray96', 'gray96', 'maroon'),
       ) + theme_vln +
-        geom_point(aes(fill=FFPE_seurat@meta.data$subtype, group=FFPE_seurat@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
-        geom_line(aes(group = FFPE_seurat@meta.data$orig.ident), position = position_dodge(0.2)) +
-        stat_compare_means(aes(label = after_stat(p.signif)), 
+        geom_point(aes(fill=FFPE_seurat_ERMS@meta.data$subtype, group=FFPE_seurat_ERMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ERMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.format)), 
                            method = 't.test', 
                            size = 5, 
                            label.y.npc = 0.95, 
@@ -247,5 +248,89 @@ saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
       
       plot_grid(p1, p2, p3, ncol = 3, align = "h", axis = "tb")
       ggsave(file.path(plot_dir,"7_FNRMS_VlnPlot.pdf"), width=7, height=4.5)
+      
+    
+      
+      
+      
+# Violin plots FP-RMS only ------------------------------------------------      
+      # subset
+      FFPE_seurat_ARMS <- subset(FFPE_seurat, subset = subtype == 'ARMS')
+      # Scale data
+      ScaleData(FFPE_seurat_ARMS)
+      
+      
+      # Violin plots ------------------------------------------------
+      compare_means(Proliferative ~ treatment,  data = FFPE_seurat_ARMS[[]], paired = TRUE)
+      p2 <- VlnPlot(FFPE_seurat_ARMS,
+                    features = 'Proliferative',
+                    group.by = 'treatment',
+                    pt.size=0,
+                    cols = c( 'gray96', 'gray96', 'lightseagreen'),
+      ) + 
+        geom_point(aes(fill=FFPE_seurat_ARMS@meta.data$subtype,group=FFPE_seurat_ARMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ARMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      
+      
+      compare_means(Differentiated ~ treatment,  data = FFPE_seurat_ARMS[[]], paired = TRUE)
+      p3 <- VlnPlot(FFPE_seurat_ARMS,
+                    features = 'Differentiated',
+                    group.by = 'treatment',
+                    pt.size=0,
+                    cols = c( 'gray96', 'gray96', 'lightseagreen'),
+      ) + 
+        geom_point(aes(fill=FFPE_seurat_ARMS@meta.data$subtype, group=FFPE_seurat_ARMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ARMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      
+      
+      
+      compare_means(Progenitor ~ treatment,  data = FFPE_seurat_ARMS[[]])
+      p1 <- VlnPlot(FFPE_seurat_ARMS,
+                    features = 'Progenitor',
+                    group.by = 'treatment',
+                    pt.size=0,
+                    cols = c( 'gray96', 'gray96', 'lightseagreen'),
+      ) + 
+        geom_point(aes(fill=FFPE_seurat_ARMS@meta.data$subtype, group=FFPE_seurat_ARMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ARMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()      
+      
+      
+      compare_means(Muscle_lineage_score ~ treatment,  data = FFPE_seurat_ARMS[[]])
+      VlnPlot(FFPE_seurat_ARMS,
+              features = 'Muscle_lineage_score',
+              group.by = 'treatment',
+              pt.size=0,
+              cols = c( 'gray96', 'gray96', 'lightseagreen'),
+      ) + theme_vln +
+        geom_point(aes(fill=FFPE_seurat_ARMS@meta.data$subtype, group=FFPE_seurat_ARMS@meta.data$orig.ident),size=3,shape=21, position = position_dodge(0.2)) +
+        geom_line(aes(group = FFPE_seurat_ARMS@meta.data$orig.ident), position = position_dodge(0.2)) +
+        stat_compare_means(aes(label = after_stat(p.signif)), 
+                           method = 't.test', 
+                           size = 5, 
+                           label.y.npc = 0.95, 
+                           label.x.npc = 0.5, 
+        ) + NoLegend()
+      ggsave(file.path(plot_dir, "6_FNRMS__Vln_plot_muscle-score_treatment.pdf"), width=2.5, height=4, dpi=300) 
+      
+      plot_grid(p1, p2, p3, ncol = 3, align = "h", axis = "tb")
+      ggsave(file.path(plot_dir,"7_FPRMS_VlnPlot.pdf"), width=7, height=4.5)
       
       
