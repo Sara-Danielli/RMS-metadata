@@ -11,7 +11,7 @@ library(viridis)
 library(future)
 library(paletteer)
 library(SeuratObject)
-library(SCpubr)
+#library(SCpubr)
 library(readxl)
 library(clustree)
 library(cowplot)
@@ -158,7 +158,8 @@ for (a in 1:length(variables2)) {
 
 
 # UMAP plot Louvain clusters 
-DimPlot(PDX.integrated, reduction = "umap_rpca",  label = FALSE, cols = col_cluster_names, pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012)) + NoLegend() + NoAxes()
+DimPlot(PDX.integrated, reduction = "umap_rpca", group.by = 'seurat_clusters', label = 1, cols = col_cluster_names, pt.size = 2, 
+        raster=TRUE, raster.dpi = c(1012, 1012)) + NoAxes() + NoLegend()
 ggsave(file.path(analysis_dir, paste0("7_UMAP_clusters.pdf")), width=5, height=5, dpi=300)
 
 DimPlot(PDX.integrated, reduction = "umap_rpca",  label = 1, cols = col_cluster_names, pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012)) + NoLegend() + NoAxes()
@@ -166,7 +167,6 @@ ggsave(file.path(analysis_dir, paste0("7_UMAP_clusters_labels.pdf")), width=, he
 
 DimPlot(PDX.integrated, reduction = "umap_rpca",  label = 1, cols = col_cluster_names, pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012)) + NoAxes()
 ggsave(file.path(analysis_dir, paste0("7_UMAP_clusters_legend.pdf")), width=5, height=4, dpi=300)
-
 
 # UMAP plots of scores
 p <- FeaturePlot(PDX.integrated, features = scores, reduction = "umap_rpca", combine = FALSE, sort.cell = TRUE, pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012))
@@ -471,13 +471,21 @@ ggsave(file.path(analysis_dir,"17_correlation_subset_500_cells.pdf"), width=6, h
 
 
 
-RMS.integrated <- readRDS(file.path(base_dir, "write/RMS_atlas_final_20240130.rds"))
+PDX.integrated <- readRDS(file.path(base_dir, "write/RMS_atlas_final_20240130.rds"))
+
+DimPlot(PDX.integrated, reduction = "umap_rpca",  group.by = 'Cluster assignment', label = 0, cols = col_cluster_names_aggregate, pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012), shuffle=TRUE)  + NoAxes()
+ggsave(file.path(analysis_dir, "7b_UMAP_clusters_aggregates.pdf"), width=5.5, height=4, dpi=300)
+
+DimPlot(PDX.integrated, reduction = "umap_rpca",  group.by = 'Cluster assignment',
+        cols = col_cluster_names_aggregate, pt.size = 2, raster=TRUE, raster.dpi = c(1012, 1012), shuffle=TRUE) + NoLegend() + NoAxes()
+ggsave(file.path(analysis_dir, "7b_UMAP_clusters_aggregates_no_legend.pdf"), width=4, height=4, dpi=300)
+
 
 # Violin plot neuronal markers
 Vln_scores <- c("TBXT", "SOX2")
 names(Vln_scores) <- c("TBXT", "SOX2")
 
-VlnPlot(RMS.integrated, 
+VlnPlot(PDX.integrated, 
        features = 'Muscle lineage score', 
        group.by = 'name',  
        split.by = 'subtype',  
@@ -490,12 +498,12 @@ VlnPlot(RMS.integrated,
 ggsave(file.path(analysis_dir, paste0("18_Vln_plot_scores_muscle_lineage_score.pdf")), width=15, height=6)
 
 
-VlnPlot(RMS.integrated, features = Vln_scores[[a]], group.by = 'name',  split.by = 'subtype',  pt.size=0,  cols = col_subtype) 
+VlnPlot(PDX.integrated, features = Vln_scores[[a]], group.by = 'name',  split.by = 'subtype',  pt.size=0,  cols = col_subtype) 
 ggsave(file.path(analysis_dir, paste0("18_Vln_plot_scores_",names(Vln_scores)[a],".pdf")), width=15, height=5, dpi=300)
 
 
 # Dotplot scores
-DotPlot(RMS.integrated, 
+DotPlot(PDX.integrated, 
         features = names(Vln_scores), 
         group.by = 'Cluster assignment',
         split.by = 'subtype',
@@ -559,4 +567,24 @@ for(i in 1:length(p)) {
 plot_grid(plotlist = p, ncol=2)
 ggsave(file.path(analysis_dir, paste0("23_VlnPlot_Progenitor_differentiated_score.pdf")), width=8, height=5, dpi=300)
 
+
+
+# Violin plot scores Fig. 3
+p1 <- VlnPlot(PDX.integrated, features = 'Proliferative score', 
+              group.by = 'subtype', pt.size=0)  +
+  labs (y='Module score, AU', x='', title = 'Proliferative score') + 
+  scale_fill_manual(values = col_subtype) + 
+  geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+  theme_vln +
+  stat_compare_means(method = 't.test', size = 3)
+p2 <- VlnPlot(PDX.integrated, features = 'Muscle lineage score', 
+              group.by = 'subtype', pt.size=0)   +
+  labs (y='Module score, AU', x='', title = 'Proliferative score') + 
+  scale_fill_manual(values = col_subtype) + 
+  geom_boxplot(outlier.shape=NA, width=0.1, fill="white") + NoLegend() +
+  theme_vln +
+  stat_compare_means(method = 't.test', size = 3)
+
+plot_grid(p1, p2, ncol = 2)
+ggsave(file.path(analysis_dir, paste0("24_VlnPlot_score.pdf")), width=5, height=5, dpi=300)
 
