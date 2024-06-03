@@ -249,7 +249,7 @@ saveRDS(FFPE_seurat, file.path(base_dir, 'write/FFPE_patients_processed.rds'))
       plot_grid(p1, p2, p3, ncol = 3, align = "h", axis = "tb")
       ggsave(file.path(plot_dir,"7_FNRMS_VlnPlot.pdf"), width=7, height=4.5)
       
-    
+      write.csv(FFPE_seurat_ERMS@meta.data, file.path(plot_dir, '7_FNRMS_raw_data.csv'))
       
       
       
